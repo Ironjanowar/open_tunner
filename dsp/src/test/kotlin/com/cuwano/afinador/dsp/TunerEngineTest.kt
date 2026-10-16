@@ -408,7 +408,7 @@ class TunerEngineTest {
     }
 
     @Test
-    fun `a less sensitive level raises the ambient floor on the next profile change`() {
+    fun `a less sensitive level applies its activation threshold on the next profile change`() {
         val sampleRate = 48_000
         val engine = newEngine(sampleRate, SensitivityProfile.MUY_ALTA)
 
@@ -424,9 +424,9 @@ class TunerEngineTest {
             "MUY_ALTA never detected the quiet note before the profile change",
         )
 
-        // MUY_SUAVE's absolute floor sits far above the calibrated ambient level, so
-        // the change must raise the effective floor immediately instead of waiting
-        // for the next learning cycle.
+        // The signal sits above MUY_ALTA's threshold but below MUY_SUAVE's. The
+        // less-sensitive profile must therefore close the absolute activation gate
+        // on the following frame, without restarting or rebuilding the engine.
         engine.setProfile(SensitivityProfile.MUY_SUAVE)
         val afterSwitch = runSignal(
             engine,
@@ -436,8 +436,8 @@ class TunerEngineTest {
 
         assertTrue(
             settled.isNotEmpty(),
-            "the quiet note stayed live after switching to MUY_SUAVE: the floor was not raised to the " +
-                "new minimum right away",
+            "the quiet note stayed live after switching to MUY_SUAVE: its activation threshold " +
+                "was not applied right away",
         )
         assertTrue(
             settled.all { it != null && !it.isLive },
@@ -709,12 +709,9 @@ class TunerEngineTest {
 
     @Test
     fun `a soft harmonic rich low note is reported live and correct at alta`() {
-        // Below LOW_BAND_LIMIT_HZ the current guard is a blunt raw-RMS floor
-        // (LOW_BAND_MINIMUM_RMS = 0.020, about -34 dBFS), so the guitar's low
-        // E/A/D and a bass low E all have to be played ~10.5 dB louder than ALTA's
-        // own minimumNoteRms (0.006, -44.4 dBFS). A softly played harmonic-rich
-        // string is a real note and must be reported at the profile's own level:
-        // its harmonic structure, not its loudness, is what separates it from hum.
+        // Below LOW_BAND_LIMIT_HZ a softly played harmonic-rich string must be
+        // accepted at ALTA's own threshold. Its harmonic structure, rather than a
+        // separate low-band level floor, is what separates the note from hum.
         SAMPLE_RATES.forEach { sampleRate ->
             listOf(82.41, 110.0, 146.83).forEach { fundamentalHz ->
                 val signal = harmonicLowNote(
@@ -756,10 +753,10 @@ class TunerEngineTest {
 
     @Test
     fun `the sensitivity slider still changes whether a soft low note is heard`() {
-        // Exact levels pinned: at raw RMS 0.0080 (about -41.9 dBFS) the soft
-        // 82.41 Hz (E2) harmonic note is live at ALTA (minimumNoteRms 0.006) and
-        // MUY_ALTA (0.003) and silent at NORMAL (0.012), SUAVE (0.020) and
-        // MUY_SUAVE (0.030). Below 150 Hz the sensitivity slider must move the
+        // Exact levels pinned: at raw RMS 0.0006 (about -64.4 dBFS) the soft
+        // 82.41 Hz (E2) harmonic note is live at ALTA (minimumNoteRms 0.0004) and
+        // MUY_ALTA (0.0002) and silent at NORMAL (0.0008), SUAVE (0.0016) and
+        // MUY_SUAVE (0.0032). Below 150 Hz the sensitivity slider must move the
         // detection level again, instead of every profile sharing one fixed floor.
         SAMPLE_RATES.forEach { sampleRate ->
             val signal = harmonicLowNote(
@@ -823,10 +820,9 @@ class TunerEngineTest {
 
     @Test
     fun `a pure 60 hz hum above the level threshold is rejected by harmonic structure`() {
-        // amplitude 0.012 -> raw RMS 0.00849, above ALTA's 0.006 and MUY_ALTA's 0.003
-        // minimumNoteRms, so the per-profile level knob cannot be what rejects it: the
-        // absence of 2f/3f energy is. Today the old 0.020 low-band level floor hides
-        // this; the harmonic-structure check must keep it silent once that floor is gone.
+        // amplitude 0.012 -> raw RMS 0.00849, above every profile's minimumNoteRms,
+        // so the per-profile level knob cannot be what rejects it: the
+        // absence of 2f/3f energy is. The harmonic-structure check must keep it silent.
         SAMPLE_RATES.forEach { sampleRate ->
             PROFILES.forEach { profile ->
                 val callbacks = runSignal(
@@ -1022,18 +1018,19 @@ class TunerEngineTest {
         const val MAX_FREQUENCY_HZ = 1500.0
 
         /** Sine amplitude of the "quiet note" fixtures. */
-        const val QUIET_NOTE_AMPLITUDE = 0.01
+        const val QUIET_NOTE_AMPLITUDE = 0.001
 
-        /** A sine of amplitude 0.01 has an RMS of 0.01 / sqrt(2) = 0.00707 (-43.0 dBFS). */
-        const val QUIET_NOTE_RMS = 0.00707
-        const val QUIET_NOTE_DBFS = -43.0
+        /** A sine of amplitude 0.001 has an RMS of 0.001 / sqrt(2) = 0.000707 (-63.0 dBFS). */
+        const val QUIET_NOTE_RMS = 0.000707
+        const val QUIET_NOTE_DBFS = -63.0
 
         /**
-         * The profile-change fixture has to sit between the two levels' absolute
-         * floors: loud enough for MUY_ALTA's floor, quiet enough that MUY_SUAVE's
-         * floor (0.004) plus its 5x signal-to-noise ratio still rejects it.
+         * The profile-change fixture has to sit between two neighbouring levels'
+         * activation thresholds: above MUY_ALTA's and SUAVE's, below MUY_SUAVE's
+         * (0.0032), so switching to the least sensitive level must silence it once
+         * the floor has been raised to that level's own minimum.
          */
-        const val QUIET_PROFILE_SWITCH_AMPLITUDE = 0.026
+        const val QUIET_PROFILE_SWITCH_AMPLITUDE = 0.0035
 
         val SAMPLE_RATES = intArrayOf(44_100, 48_000)
 
@@ -1050,12 +1047,12 @@ class TunerEngineTest {
         val LOW_NOTE_HARMONICS = listOf(1.0, 0.5, 0.33, 0.25)
 
         /**
-         * Raw RMS of the soft low-note fixtures, about -41.9 dBFS. It sits above ALTA's
-         * own `minimumNoteRms` (0.006, -44.4 dBFS) and below NORMAL's (0.012, -38.4 dBFS),
+         * Raw RMS of the soft low-note fixtures, about -64.4 dBFS. It sits above ALTA's
+         * own `minimumNoteRms` (0.0004, -68.0 dBFS) and below NORMAL's (0.0008, -61.9 dBFS),
          * so a soft sub-150 Hz note at this level must be heard by the two most sensitive
-         * levels and ignored by the other three. (A -45 dBFS note, as the review
-         * mentions, sits below ALTA's own threshold and could never be live at ALTA.)
+         * levels and ignored by the other three. (A note 6 dB below ALTA's threshold could
+         * never be live at ALTA, which is why the fixture tracks the profile table.)
          */
-        const val SOFT_LOW_NOTE_RMS = 0.0080
+        const val SOFT_LOW_NOTE_RMS = 0.0006
     }
 }

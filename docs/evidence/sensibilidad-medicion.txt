@@ -1,0 +1,100 @@
+Medición de la escala de sensibilidad (sonda temporal, valores finales)
+Comando: ./gradlew --no-daemon --no-configuration-cache :dsp:test --tests '*SensitivityMeasurementProbe*' -i
+Java: /home/agent/.local/share/mise/installs/java/17.0.2
+
+PROBE dry profile=MUY_SUAVE rms=2.0E-5 dbfs=-93.97940008672037 live=0/90
+PROBE dry profile=MUY_SUAVE rms=5.0E-5 dbfs=-86.02059991327963 live=0/90
+PROBE dry profile=MUY_SUAVE rms=1.0E-4 dbfs=-80.0 live=0/90
+PROBE dry profile=MUY_SUAVE rms=2.0E-4 dbfs=-73.97940008672037 live=0/90
+PROBE dry profile=MUY_SUAVE rms=4.0E-4 dbfs=-67.95880017344075 live=0/90
+PROBE dry profile=MUY_SUAVE rms=8.0E-4 dbfs=-61.938200260161125 live=0/90
+PROBE dry profile=MUY_SUAVE rms=0.0016 dbfs=-55.9176003468815 live=0/90
+PROBE dry profile=MUY_SUAVE rms=0.0032 dbfs=-49.89700043360188 live=86/90
+PROBE dry profile=SUAVE rms=2.0E-5 dbfs=-93.97940008672037 live=0/90
+PROBE dry profile=SUAVE rms=5.0E-5 dbfs=-86.02059991327963 live=0/90
+PROBE dry profile=SUAVE rms=1.0E-4 dbfs=-80.0 live=0/90
+PROBE dry profile=SUAVE rms=2.0E-4 dbfs=-73.97940008672037 live=0/90
+PROBE dry profile=SUAVE rms=4.0E-4 dbfs=-67.95880017344075 live=0/90
+PROBE dry profile=SUAVE rms=8.0E-4 dbfs=-61.938200260161125 live=0/90
+PROBE dry profile=SUAVE rms=0.0016 dbfs=-55.9176003468815 live=86/90
+PROBE dry profile=SUAVE rms=0.0032 dbfs=-49.89700043360188 live=90/90
+PROBE dry profile=NORMAL rms=2.0E-5 dbfs=-93.97940008672037 live=0/90
+PROBE dry profile=NORMAL rms=5.0E-5 dbfs=-86.02059991327963 live=0/90
+PROBE dry profile=NORMAL rms=1.0E-4 dbfs=-80.0 live=0/90
+PROBE dry profile=NORMAL rms=2.0E-4 dbfs=-73.97940008672037 live=0/90
+PROBE dry profile=NORMAL rms=4.0E-4 dbfs=-67.95880017344075 live=0/90
+PROBE dry profile=NORMAL rms=8.0E-4 dbfs=-61.938200260161125 live=86/90
+PROBE dry profile=NORMAL rms=0.0016 dbfs=-55.9176003468815 live=90/90
+PROBE dry profile=NORMAL rms=0.0032 dbfs=-49.89700043360188 live=90/90
+PROBE dry profile=ALTA rms=2.0E-5 dbfs=-93.97940008672037 live=0/90
+PROBE dry profile=ALTA rms=5.0E-5 dbfs=-86.02059991327963 live=0/90
+PROBE dry profile=ALTA rms=1.0E-4 dbfs=-80.0 live=0/90
+PROBE dry profile=ALTA rms=2.0E-4 dbfs=-73.97940008672037 live=0/90
+PROBE dry profile=ALTA rms=4.0E-4 dbfs=-67.95880017344075 live=86/90
+PROBE dry profile=ALTA rms=8.0E-4 dbfs=-61.938200260161125 live=90/90
+PROBE dry profile=ALTA rms=0.0016 dbfs=-55.9176003468815 live=90/90
+PROBE dry profile=ALTA rms=0.0032 dbfs=-49.89700043360188 live=90/90
+PROBE dry profile=MUY_ALTA rms=2.0E-5 dbfs=-93.97940008672037 live=0/90
+PROBE dry profile=MUY_ALTA rms=5.0E-5 dbfs=-86.02059991327963 live=0/90
+PROBE dry profile=MUY_ALTA rms=1.0E-4 dbfs=-80.0 live=0/90
+PROBE dry profile=MUY_ALTA rms=2.0E-4 dbfs=-73.97940008672037 live=86/90
+PROBE dry profile=MUY_ALTA rms=4.0E-4 dbfs=-67.95880017344075 live=90/90
+PROBE dry profile=MUY_ALTA rms=8.0E-4 dbfs=-61.938200260161125 live=90/90
+PROBE dry profile=MUY_ALTA rms=0.0016 dbfs=-55.9176003468815 live=90/90
+PROBE dry profile=MUY_ALTA rms=0.0032 dbfs=-49.89700043360188 live=90/90
+
+PROBE false profile=MUY_SUAVE hum60_0.0005=0/90 tone92_0.0005=0/90 tone440_0.0005=0/90 noise0.0007=0/90 noise0.0015=0/90
+PROBE false profile=SUAVE hum60_0.0005=0/90 tone92_0.0005=0/90 tone440_0.0005=0/90 noise0.0007=0/90 noise0.0015=0/90
+PROBE false profile=NORMAL hum60_0.0005=0/90 tone92_0.0005=0/90 tone440_0.0005=0/90 noise0.0007=0/90 noise0.0015=0/90
+PROBE false profile=ALTA hum60_0.0005=0/90 tone92_0.0005=0/90 tone440_0.0005=0/90 noise0.0007=0/90 noise0.0015=0/90
+PROBE false profile=MUY_ALTA hum60_0.0005=0/90 tone92_0.0005=0/90 tone440_0.0005=90/90 noise0.0007=0/90 noise0.0015=0/90
+PROBE room profile=MUY_SUAVE rms=2.0E-5 dbfs=-93.97940008672037 liveInTone=0 detected=false total=0/161
+PROBE room profile=MUY_SUAVE rms=5.0E-5 dbfs=-86.02059991327963 liveInTone=0 detected=false total=0/161
+PROBE room profile=MUY_SUAVE rms=1.0E-4 dbfs=-80.0 liveInTone=0 detected=false total=0/161
+PROBE room profile=MUY_SUAVE rms=2.0E-4 dbfs=-73.97940008672037 liveInTone=0 detected=false total=0/161
+PROBE room profile=MUY_SUAVE rms=4.0E-4 dbfs=-67.95880017344075 liveInTone=0 detected=false total=0/161
+PROBE room profile=MUY_SUAVE rms=8.0E-4 dbfs=-61.938200260161125 liveInTone=0 detected=false total=0/161
+PROBE room profile=MUY_SUAVE rms=0.0016 dbfs=-55.9176003468815 liveInTone=0 detected=false total=0/161
+PROBE room profile=MUY_SUAVE rms=0.0032 dbfs=-49.89700043360188 liveInTone=81 detected=true total=81/161
+PROBE room profile=MUY_SUAVE rms=0.0064 dbfs=-43.87640052032226 liveInTone=92 detected=true total=92/161
+PROBE room profile=MUY_SUAVE rms=0.0128 dbfs=-37.85580060704263 liveInTone=92 detected=true total=92/161
+PROBE room profile=SUAVE rms=2.0E-5 dbfs=-93.97940008672037 liveInTone=0 detected=false total=0/161
+PROBE room profile=SUAVE rms=5.0E-5 dbfs=-86.02059991327963 liveInTone=0 detected=false total=0/161
+PROBE room profile=SUAVE rms=1.0E-4 dbfs=-80.0 liveInTone=0 detected=false total=0/161
+PROBE room profile=SUAVE rms=2.0E-4 dbfs=-73.97940008672037 liveInTone=0 detected=false total=0/161
+PROBE room profile=SUAVE rms=4.0E-4 dbfs=-67.95880017344075 liveInTone=0 detected=false total=0/161
+PROBE room profile=SUAVE rms=8.0E-4 dbfs=-61.938200260161125 liveInTone=0 detected=false total=0/161
+PROBE room profile=SUAVE rms=0.0016 dbfs=-55.9176003468815 liveInTone=81 detected=true total=81/161
+PROBE room profile=SUAVE rms=0.0032 dbfs=-49.89700043360188 liveInTone=92 detected=true total=92/161
+PROBE room profile=SUAVE rms=0.0064 dbfs=-43.87640052032226 liveInTone=92 detected=true total=92/161
+PROBE room profile=SUAVE rms=0.0128 dbfs=-37.85580060704263 liveInTone=92 detected=true total=92/161
+PROBE room profile=NORMAL rms=2.0E-5 dbfs=-93.97940008672037 liveInTone=0 detected=false total=0/161
+PROBE room profile=NORMAL rms=5.0E-5 dbfs=-86.02059991327963 liveInTone=0 detected=false total=0/161
+PROBE room profile=NORMAL rms=1.0E-4 dbfs=-80.0 liveInTone=0 detected=false total=0/161
+PROBE room profile=NORMAL rms=2.0E-4 dbfs=-73.97940008672037 liveInTone=0 detected=false total=0/161
+PROBE room profile=NORMAL rms=4.0E-4 dbfs=-67.95880017344075 liveInTone=0 detected=false total=0/161
+PROBE room profile=NORMAL rms=8.0E-4 dbfs=-61.938200260161125 liveInTone=81 detected=true total=81/161
+PROBE room profile=NORMAL rms=0.0016 dbfs=-55.9176003468815 liveInTone=92 detected=true total=92/161
+PROBE room profile=NORMAL rms=0.0032 dbfs=-49.89700043360188 liveInTone=92 detected=true total=92/161
+PROBE room profile=NORMAL rms=0.0064 dbfs=-43.87640052032226 liveInTone=92 detected=true total=92/161
+PROBE room profile=NORMAL rms=0.0128 dbfs=-37.85580060704263 liveInTone=92 detected=true total=92/161
+PROBE room profile=ALTA rms=2.0E-5 dbfs=-93.97940008672037 liveInTone=0 detected=false total=0/161
+PROBE room profile=ALTA rms=5.0E-5 dbfs=-86.02059991327963 liveInTone=0 detected=false total=0/161
+PROBE room profile=ALTA rms=1.0E-4 dbfs=-80.0 liveInTone=0 detected=false total=0/161
+PROBE room profile=ALTA rms=2.0E-4 dbfs=-73.97940008672037 liveInTone=0 detected=false total=0/161
+PROBE room profile=ALTA rms=4.0E-4 dbfs=-67.95880017344075 liveInTone=81 detected=true total=81/161
+PROBE room profile=ALTA rms=8.0E-4 dbfs=-61.938200260161125 liveInTone=92 detected=true total=92/161
+PROBE room profile=ALTA rms=0.0016 dbfs=-55.9176003468815 liveInTone=92 detected=true total=92/161
+PROBE room profile=ALTA rms=0.0032 dbfs=-49.89700043360188 liveInTone=92 detected=true total=92/161
+PROBE room profile=ALTA rms=0.0064 dbfs=-43.87640052032226 liveInTone=92 detected=true total=92/161
+PROBE room profile=ALTA rms=0.0128 dbfs=-37.85580060704263 liveInTone=92 detected=true total=92/161
+PROBE room profile=MUY_ALTA rms=2.0E-5 dbfs=-93.97940008672037 liveInTone=0 detected=false total=0/161
+PROBE room profile=MUY_ALTA rms=5.0E-5 dbfs=-86.02059991327963 liveInTone=0 detected=false total=0/161
+PROBE room profile=MUY_ALTA rms=1.0E-4 dbfs=-80.0 liveInTone=0 detected=false total=0/161
+PROBE room profile=MUY_ALTA rms=2.0E-4 dbfs=-73.97940008672037 liveInTone=81 detected=true total=81/161
+PROBE room profile=MUY_ALTA rms=4.0E-4 dbfs=-67.95880017344075 liveInTone=92 detected=true total=92/161
+PROBE room profile=MUY_ALTA rms=8.0E-4 dbfs=-61.938200260161125 liveInTone=92 detected=true total=92/161
+PROBE room profile=MUY_ALTA rms=0.0016 dbfs=-55.9176003468815 liveInTone=92 detected=true total=92/161
+PROBE room profile=MUY_ALTA rms=0.0032 dbfs=-49.89700043360188 liveInTone=92 detected=true total=92/161
+PROBE room profile=MUY_ALTA rms=0.0064 dbfs=-43.87640052032226 liveInTone=92 detected=true total=92/161
+PROBE room profile=MUY_ALTA rms=0.0128 dbfs=-37.85580060704263 liveInTone=92 detected=true total=92/161

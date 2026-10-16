@@ -10,18 +10,25 @@ import kotlin.test.assertTrue
  *
  * A more sensitive level must loosen every gate in the same direction: a lower
  * signal-to-noise requirement, a lower primary-salience requirement, a higher
- * normalisation gain cap and a lower noise floor. That monotonicity is what
- * makes the levels predictable for the user instead of five unrelated presets.
+ * normalisation gain cap, a lower noise floor and a lower absolute activation
+ * threshold. That monotonicity is what makes the levels predictable for the user
+ * instead of five unrelated presets.
+ *
+ * The ladder was raised as a whole after field feedback: an unplugged electric
+ * guitar and a softly played ukulele were inaudible even at the top level. The
+ * activation thresholds moved down by 19.4-23.5 dB (9.4x-15x) and the
+ * normalisation gain caps rose by 1x-3x depending on the level, so the whole
+ * scale is more sensitive and the top reaches much further than before.
  */
 class SensitivityProfileTest {
     @Test
     fun `five profiles expose the confirmed parameter values`() {
         val expected = linkedMapOf(
-            SensitivityProfile.MUY_SUAVE to listOf(5.0, 0.50, 3.0, 0.004, 0.030),
-            SensitivityProfile.SUAVE to listOf(3.5, 0.42, 5.0, 0.003, 0.020),
-            SensitivityProfile.NORMAL to listOf(2.0, 0.35, 8.0, 0.002, 0.012),
-            SensitivityProfile.ALTA to listOf(1.5, 0.30, 12.0, 0.0012, 0.006),
-            SensitivityProfile.MUY_ALTA to listOf(1.2, 0.26, 16.0, 0.0008, 0.003),
+            SensitivityProfile.MUY_SUAVE to listOf(5.0, 0.50, 3.0, 0.0007, 0.0032),
+            SensitivityProfile.SUAVE to listOf(3.5, 0.42, 6.0, 0.00055, 0.0016),
+            SensitivityProfile.NORMAL to listOf(2.0, 0.35, 12.0, 0.0004, 0.0008),
+            SensitivityProfile.ALTA to listOf(1.5, 0.30, 24.0, 0.00025, 0.0004),
+            SensitivityProfile.MUY_ALTA to listOf(1.2, 0.26, 48.0, 0.00012, 0.0002),
         )
 
         assertEquals(5, SensitivityProfile.entries.size, "expected exactly five sensitivity levels")
@@ -37,6 +44,27 @@ class SensitivityProfileTest {
     @Test
     fun `default profile is alta`() {
         assertSame(SensitivityProfile.ALTA, SensitivityProfile.DEFAULT)
+    }
+
+    @Test
+    fun `every step of the ladder is a real step and not a cosmetic reordering`() {
+        // Raising "the whole scale together" means the gap between neighbouring
+        // levels has to stay playable: at least a 1.5x difference in activation
+        // threshold and in gain cap, so each step is worth selecting, and no more
+        // than 2.5x, so the five levels do not clump into two and leave the middle
+        // of the slider meaningless.
+        SensitivityProfile.entries.zipWithNext().forEach { (lessSensitive, moreSensitive) ->
+            val thresholdRatio = lessSensitive.minimumNoteRms / moreSensitive.minimumNoteRms
+            assertTrue(
+                thresholdRatio in 1.5..2.5,
+                "activation threshold ratio from $lessSensitive to $moreSensitive is $thresholdRatio",
+            )
+            val gainRatio = moreSensitive.maximumInputGain / lessSensitive.maximumInputGain
+            assertTrue(
+                gainRatio in 1.5..2.5,
+                "gain cap ratio from $lessSensitive to $moreSensitive is $gainRatio",
+            )
+        }
     }
 
     @Test

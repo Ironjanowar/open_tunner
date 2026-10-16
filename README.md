@@ -15,7 +15,11 @@ manualmente y no requiere ADB ni conexión a Internet.
 - Rango: 40–1500 Hz, A4 = 440 Hz fijo, notas con sostenidos.
 - Sensibilidad: deslizador con cinco posiciones (Muy suave · Suave · Normal · Alta · Muy
   alta) bajo la tarjeta central, por defecto `Alta`, recordado entre sesiones y aplicado
-  al instante.
+  al instante. Los umbrales de activación son entre 9,4 y 15 veces menores que en la
+  primera versión (una mejora de 19,4–23,5 dB), las ganancias máximas crecen entre 1× y
+  3× según el nivel, y el arranque en frío ya no añade una puerta por encima del nivel
+  elegido. Umbrales comprobados con una cuerda armónica sintética: Muy suave −49,9 dBFS ·
+  Suave −55,9 · Normal −61,9 · Alta −68,0 · Muy alta −74,0.
 - Última nota: la nota detectada se queda en pantalla hasta que suena otra, y pasados
   0,6 s sin señal se atenúa como «Última nota» con el aviso verde apagado.
 - Interfaz oscura de una pantalla con tarjeta central, aguja de ±50 cents, estados de
@@ -76,15 +80,16 @@ app/build/outputs/apk/debug/app-debug.apk
 APK debug firmado con la clave de depuración (no sirve para publicar en tiendas).
 
 - Tamaño: 11,55 MB (`11 550 593` bytes).
-- Versión: `0.2.0` (`versionCode 2`), instalable como actualización de la versión anterior.
-- SHA-256: `8519da0af932f0b54481bb0dcc1f81da32e7be4e01f2585c5cf2f7458f35a87b`.
+- Versión: `0.3.0` (`versionCode 3`), instalable como actualización de la versión anterior.
+- SHA-256: `2368b79efb19b16ec891fa18d5c7687af3712125573062773fc1c169c4f084ed`.
 - Verificación de firma, manifiesto y permisos: [docs/evidence/apk-verification.txt](docs/evidence/apk-verification.txt).
 - Instalación sin ADB: [docs/instalacion.md](docs/instalacion.md).
 
 ## Restricciones respetadas
 
-- Sin red, sin cuentas, sin anuncios, sin telemetría. El manifiesto solo declara
-  `RECORD_AUDIO`.
+- Sin red, sin cuentas, sin anuncios, sin telemetría. El único permiso funcional
+  declarado es `RECORD_AUDIO` (Android añade el permiso de firma interno
+  `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`).
 - No se copió código, binarios ni recursos propietarios de terceros. La ingeniería
   inversa previa de otra app se usó únicamente como referencia de diseño.
 - Las pruebas acústicas reales quedan pendientes y se declaran como tales.

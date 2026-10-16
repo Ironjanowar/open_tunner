@@ -14,9 +14,9 @@ pueden validarse tocando un instrumento en el dispositivo del usuario.
 
 | Ámbito | Resultado final |
 | --- | --- |
-| DSP JVM | 129 tests, 0 fallos, 0 errores |
+| DSP JVM | 134 tests, 0 fallos, 0 errores |
 | App host JVM | 67 tests, 0 fallos, 0 errores |
-| Total host | 196 tests, 0 fallos, 0 errores |
+| Total host | 201 tests, 0 fallos, 0 errores |
 | Instrumentación API 37 | 18 tests, `OK (18 tests)` |
 | Lint Android | 0 errores, 7 avisos de versión/`UseTomlInstead` |
 | Ensamblado | APK debug generado y firmado |
@@ -41,6 +41,10 @@ de otro tipo).
    dejando `minimumNoteRms` como umbral único en todas las frecuencias.
 6. Revisión de reanudación: el coordinador ahora exige una lectura viva en la ejecución
    actual; una nota anterior nunca aparece como `Afinado` al volver del segundo plano.
+7. Escala de sensibilidad elevada tras la prueba acústica real: RED con 10 fallos por
+   umbrales antiguos; GREEN con umbrales de −49,9 a −74,0 dBFS, arranque en frío sin una
+   puerta oculta, guitarra eléctrica desenchufada sintética en `Alta`, rechazo de ruido y
+   zumbido y revisión independiente doble sin bloqueantes.
 
 ## Garantías comprobadas
 
@@ -51,10 +55,11 @@ de otro tipo).
   perfiles (en las ejecuciones finales: cero adquisiciones).
 - Zumbido puro 50/60/100/120 Hz a amplitudes 0,002–0,020: ninguna lectura en los cinco
   perfiles y a 44,1/48 kHz.
-- Nota grave armónica y floja (82/110/146,8 Hz, RMS 0,008 ≈ −42 dBFS): detectada en
+- Nota grave armónica y floja (82/110/146,8 Hz, RMS 0,0006 ≈ −64,4 dBFS): detectada en
   `Alta`/`Muy alta`, ignorada en los tres niveles menos sensibles.
-- Umbral medido con cuerda sintética armónica en `Alta`: ≈−44,5 dBFS en E2, A2, D3, G3,
-  B3 y E4; en `Muy alta`: ≈−50,5 dBFS. El deslizador vuelve a actuar por igual en graves.
+- Umbrales comprobados con cuerda sintética armónica: `Muy suave` −49,9 dBFS, `Suave`
+  −55,9, `Normal` −61,9, `Alta` −68,0 y `Muy alta` −74,0. El deslizador vuelve a actuar
+  por igual en graves y el arranque en frío ya no exige esperar a que baje el estimador.
 - Fuera de rango: 20/30/1700/2000 Hz no inventan nota; 40/1500 Hz sí se detectan.
 - Latencia de adquisición/cambio ≤300 ms. Una lectura adquirida ya no se libera: pasa a
   `Última nota` tras 0,6 s y se conserva hasta otra nota o reinicio.
@@ -83,8 +88,8 @@ Emulador `fretboard-api37`, API 37, x86_64:
 ## APK final
 
 - Tamaño: `11 550 593` bytes.
-- Versión: `0.2.0` (`versionCode 2`).
-- SHA-256: `8519da0af932f0b54481bb0dcc1f81da32e7be4e01f2585c5cf2f7458f35a87b`.
+- Versión: `0.3.0` (`versionCode 3`).
+- SHA-256: `2368b79efb19b16ec891fa18d5c7687af3712125573062773fc1c169c4f084ed`.
 
 ## Riesgos residuales declarados
 
@@ -98,5 +103,11 @@ Emulador `fretboard-api37`, API 37, x86_64:
 - Tras silencio digital prolongado, un ataque instantáneo puede mostrar 1–3 frames
   transitorios equivocados antes de estabilizarse; un ataque/fade real de 50 ms no lo
   reproduce en la sonda.
+- En `Muy alta`, un tono puro muy flojo por encima de 150 Hz puede considerarse nota; es
+  el coste aceptado de priorizar instrumentos muy silenciosos. El ruido blanco y el
+  zumbido puro de red siguen sin producir lecturas en el corpus automatizado.
+- El objetivo «ukelele real en Normal / guitarra eléctrica desenchufada real en Alta»
+  requiere confirmación en el teléfono: el host solo demuestra señales armónicas
+  sintéticas en esos niveles y el emulador no tiene un micrófono acústico real.
 - El panel atenuado, el ajuste en paisaje y la ausencia de recortes deben comprobarse
   visualmente en el teléfono concreto.

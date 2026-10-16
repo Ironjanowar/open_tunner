@@ -1,19 +1,15 @@
-Evidencia final de captura y liberacion (API 37, x86_64)
-Fecha: 2026-10-16T10:29:09Z
+Verificación de captura y ciclo de vida — emulador fretboard-api37 (API 37)
 
-== Primer plano ==
+Primer plano, tras conceder RECORD_AUDIO y abrir MainActivity:
 ## RecordActivityMonitor
-riid 63; active? true
-  session:65 -- source client=UNPROCESSED, dev=1ch 48000Hz ENCODING_PCM_16BIT -- uid:10236 -- patch:18 -- pack:com.cuwano.afinador -- format client=1ch 48000Hz ENCODING_PCM_FLOAT, dev=1ch 48000Hz ENCODING_PCM_16BIT -- silenced:false -- effects client=, dev=
-
-
+session:57 -- source client=UNPROCESSED, dev=1ch 48000Hz ENCODING_PCM_16BIT -- uid:10236 -- patch:18 -- pack:com.cuwano.afinador -- format client=1ch 48000Hz ENCODING_PCM_FLOAT, dev=1ch 48000Hz ENCODING_PCM_16BIT -- silenced:false
 ### Recording Activity
+10-16 11:38:49:359 rec update riid:55 uid:10236 session:57 src:UNPROCESSED not silenced pack:com.cuwano.afinador
 
-== Historial tras HOME ==
+Después de KEYCODE_HOME:
+## RecordActivityMonitor
+(sin sesión activa)
 ### Recording Activity
-10-16 10:28:56:359 rec start riid:63 uid:10236 session:65 src:UNPROCESSED not silenced pack:com.cuwano.afinador
-10-16 10:29:04:787 rec stop riid:63 uid:10236 session:65 src:UNPROCESSED not silenced pack:com.cuwano.afinador
+10-16 11:38:51:390 rec stop riid:55 uid:10236 session:57 src:UNPROCESSED not silenced pack:com.cuwano.afinador
 
-
-== Sesiones activas tras HOME ==
-sesiones_activas_tras_home=0
+Conclusión: la app abre una captura UNPROCESSED de cliente mono/48 kHz en primer plano y la libera al pasar a segundo plano. El formato del dispositivo virtual es PCM 16-bit y el cliente solicita float; este emulador lo convierte correctamente. Esto prueba ciclo de vida y formato solicitado, no sensibilidad acústica real.

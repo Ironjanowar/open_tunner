@@ -256,7 +256,7 @@ INSTRUMENTATION_STATUS: test=sensitivitySlider_labelsTheFactoryDefault
 INSTRUMENTATION_STATUS_CODE: 0
 INSTRUMENTATION_RESULT: stream=
 
-Time: 11,142
+Time: 5,568
 
 OK (18 tests)
 

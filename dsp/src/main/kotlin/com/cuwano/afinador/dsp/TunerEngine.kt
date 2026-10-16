@@ -270,7 +270,23 @@ class TunerEngine(
         const val YIN_CMND_THRESHOLD = 0.15
         const val MINIMUM_RELIABLE_YIN_CONFIDENCE = 0.70
         const val MINIMUM_YIN_CONFIDENCE = 0.80
-        const val INITIAL_NOISE_RMS = 0.010
+        /**
+         * Startup ambient estimate, in raw RMS (about -61.9 dBFS): a quiet room.
+         *
+         * It must stay at or below four times the smallest activation threshold of
+         * any level (MUY_ALTA, 0.0002), because the weak relative floor gate sits
+         * at a quarter of the estimate. A higher startup value therefore becomes a
+         * hidden activation gate above what the selected level advertises, which is
+         * exactly what the first release did: it started at 0.010 (-40 dBFS) and
+         * took tens of seconds of quiet to decay, so right after launch the tuner
+         * behaved as if the room were loud and the player had to crank the slider
+         * wait. It is also the largest value that keeps every level's own
+         * absolute floor below it, which the adaptive estimate requires. The
+         * estimate only learns observations close to its current envelope; much
+         * louder ambience is rejected primarily because it lacks reliable pitch,
+         * not because this estimate can always climb to the room level.
+         */
+        const val INITIAL_NOISE_RMS = 0.0008
         const val NOISE_HALF_LIFE_SECONDS = 5.0
         const val SALIENCE_REFERENCE_RATIO = 0.25
         const val SMOOTHING_HALF_LIFE_SECONDS = 0.025

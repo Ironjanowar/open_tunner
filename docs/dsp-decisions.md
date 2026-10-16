@@ -41,16 +41,39 @@ del umbral y el afinador inventa notas. Por eso:
 El deslizador elige uno de cinco perfiles. `minimumNoteRms` es la palanca real de "qué
 flojo puede ser una nota", y se aplica con la misma regla a todas las frecuencias.
 
-| Nivel | `minimumNoteRms` | Ganancia máxima | Salience mínima | SNR | Suelo mínimo |
-| --- | --- | --- | --- | --- | --- |
-| Muy suave | 0,030 | 3× | 0,50 | 5,0 | 0,004 |
-| Suave | 0,020 | 5× | 0,42 | 3,5 | 0,003 |
-| Normal | 0,012 | 8× | 0,35 | 2,0 | 0,002 |
-| Alta (de fábrica) | 0,006 | 12× | 0,30 | 1,5 | 0,0012 |
-| Muy alta | 0,003 | 16× | 0,26 | 1,2 | 0,0008 |
+La escala se subió entera tras el uso real: una guitarra eléctrica desenchufada y un
+ukelele tocado flojo no se oían ni en el nivel más alto. Según el nivel, los umbrales de
+activación bajaron entre 9,4 y 15 veces (19,4–23,5 dB) y las ganancias máximas crecieron
+entre 1× y 3×.
+
+| Nivel | `minimumNoteRms` | ≈ dBFS | Ganancia máxima | Salience mínima | SNR | Suelo mínimo |
+| --- | --- | --- | --- | --- | --- | --- |
+| Muy suave | 0,0032 | −49,9 | 3× | 0,50 | 5,0 | 0,0007 |
+| Suave | 0,0016 | −55,9 | 6× | 0,42 | 3,5 | 0,00055 |
+| Normal | 0,0008 | −61,9 | 12× | 0,35 | 2,0 | 0,0004 |
+| Alta (de fábrica) | 0,0004 | −68,0 | 24× | 0,30 | 1,5 | 0,00025 |
+| Muy alta | 0,0002 | −74,0 | 48× | 0,26 | 1,2 | 0,00012 |
 
 Todos los valores son estrictamente monótonos: al subir de nivel baja el umbral de nota,
-baja la exigencia de claridad y de relación señal/ruido, y sube la ganancia máxima.
+baja la exigencia de claridad y de relación señal/ruido, y sube la ganancia máxima. Cada
+escalón multiplica el umbral por 2,0 y la ganancia por 2,0, así que ningún nivel queda
+decorativo.
+
+Umbrales comprobados con una cuerda sintética armónica de 82,41 Hz sobre un ambiente de
+sala tranquila (RMS 0,000115): Muy suave 0,0032, Suave 0,0016, Normal 0,0008, Alta
+0,0004 y Muy alta 0,0002. Es decir, cada nivel detecta exactamente lo que anuncia su propio
+`minimumNoteRms`; el límite práctico del nivel más alto con ese ambiente lo pone la
+relación señal/ruido física (unos 10 dB por encima del ruido de sala), no la puerta.
+
+`INITIAL_NOISE_RMS` bajó de 0,010 (−40 dBFS) a 0,0008 (−61,9 dBFS), una sala tranquila.
+Antes, al abrir la app el estimador arrancaba en 0,010 y tardaba decenas de segundos en
+bajar (semivida de 5 s), así que la puerta efectiva al arrancar era ≈0,0025 incluso con el
+nivel más alto seleccionado: de ahí que hubiera que subir la sensibilidad y esperar. El
+valor nuevo es además el mayor que no tapa el umbral del nivel más alto, porque la puerta
+relativa es un cuarto del estimador (0,25 × 0,0008 = 0,0002 = `minimumNoteRms` de Muy
+alta). El estimador adaptativo no puede seguir ambientes muy por encima de su envolvente
+de aprendizaje; en los niveles altos la protección principal frente a ruido sigue siendo
+la ausencia de un pitch fiable y, por debajo de 150 Hz, la estructura armónica.
 
 ## Zumbido de red frente a cuerda
 

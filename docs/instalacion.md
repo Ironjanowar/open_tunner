@@ -23,15 +23,20 @@ ajustes. El afinador **no** manda audio a ningún sitio, no usa red y no guarda 
 
 ## Deslizador de sensibilidad
 
-Debajo de la tarjeta hay un deslizador con cinco posiciones y el nombre de cada una:
+Debajo de la tarjeta hay un deslizador con cinco posiciones y el nombre de cada una. Los
+cinco niveles son bastante más sensibles que en la primera versión, y además no hacen
+falta los primeros segundos de "calentamiento": antes había que subir el deslizador y
+esperar a que la app dejara de creer que la habitación era ruidosa.
 
-- **Muy suave**: solo responde a notas fuertes y claras. Úsalo en sitios ruidosos o si
-  ves notas que no tocas.
+- **Muy suave**: el nivel menos sensible, equivalente al máximo de la primera versión. Úsalo
+  en sitios ruidosos o si ves notas que no tocas.
 - **Suave**
-- **Normal**
-- **Alta**: viene de fábrica.
-- **Muy alta**: detecta notas muy flojas. Es el que más riesgo tiene de confundir ruido
-  con nota, así que en silencio comprueba que no aparece nada.
+- **Normal**: suficiente para un ukelele o una guitarra acústica tocados con normalidad.
+- **Alta**: viene de fábrica. Con el móvil cerca, detecta una guitarra eléctrica
+  desenchufada.
+- **Muy alta**: el nivel más sensible; apura hasta donde llega la relación señal/ruido real
+  de la sala. Es el que más riesgo tiene de confundir un ruido tonal de fondo con una nota,
+  así que en silencio comprueba que no aparece nada.
 
 El nivel se guarda y se recupera al volver a abrir la app. Se aplica al instante: no hay
 que reiniciar nada.
@@ -58,6 +63,7 @@ Cuando tocas una nota y dejas de sonar, el afinador **no borra** lo que estaba m
 | 3 | Aflojar la cuerda | La nota cambia y la aguja se va a un lado |
 | 4 | Dejar la nota afinada | Aparece `Afinado` a ±5 cents y no parpadea |
 | 5 | Tocar flojo, sin darle fuerte | Con el nivel de fábrica (`Alta`) la nota se detecta igual |
+| 5b | Guitarra eléctrica desenchufada, móvil junto a la cuerda | Con `Alta` debe dar la nota de la cuerda; prueba también `Normal` y `Muy alta` para ver dónde deja de oírla |
 | 6 | Callar dejando de tocar | La nota no desaparece: se atenúa y pasa a `Última nota` |
 | 7 | Tocar otra nota distinta | Sustituye a la anterior y vuelve a estar viva |
 | 8 | Sala en silencio, sin tocar nada | No muestra ninguna nota |
