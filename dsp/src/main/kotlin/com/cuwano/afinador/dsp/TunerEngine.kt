@@ -5,8 +5,8 @@ class TunerEngine(
     private val sampleRate: Int,
     private val frameSize: Int = 4096,
     private val hopSize: Int = 1024,
-    minFrequencyHz: Double = 40.0,
-    maxFrequencyHz: Double = 1500.0,
+    private val minFrequencyHz: Double = 40.0,
+    private val maxFrequencyHz: Double = 1500.0,
 ) {
     private val frames = SampleRingBuffer(frameSize, hopSize)
     private val dcRemoved = FloatArray(frameSize)
@@ -57,6 +57,11 @@ class TunerEngine(
     private fun analyze(frame: FloatArray): TunerReading? {
         val measurement = SignalMetrics.analyze(frame, dcRemoved)
         val proposal = salienceDetector.propose(dcRemoved, sampleRate)
+        // Presencia real fuera de rango: abstenerse sin enseñar el ruido
+        // ambiente. El tono es señal, no ambiente, y recortarlo o plegarlo
+        // fabricaría una nota in-range. Decision del proyecto: mostrar
+        // ausencia, nunca inventar.
+        if (isClearlyOutOfRange(salienceDetector.dominantPeakFrequencyHz)) return null
         val yin = yinDetector.analyze(dcRemoved, sampleRate)
         val normalizedSalience = normalizeSalience(proposal?.salience ?: 0.0, measurement.rms)
         val reliablePitch = !measurement.clipped &&
@@ -99,6 +104,28 @@ class TunerEngine(
     }
 
     /**
+     * El pico espectral dominante cae claramente fuera de `[min, max]`.
+     *
+     * Tolerancia del 3 %: un tono exactamente en 40 o 1500 Hz pierde energía a
+     * bins vecinos por la ventana Hann y su pico interpolado puede quedar unas
+     * centésimas de semitono fuera del borde, así que un margen estrecho
+     * mantendría esos tonos límite. Sin esta guarda un tono puro por debajo del
+     * rango se recortaría al mínimo y uno por encima se plegaría a un
+     * subarmónico mediante la búsqueda de saliencia: se inventaría una nota
+     * dentro del rango.
+     *
+     * Contrapartida conocida: un fundamental dentro del rango cuyo parcial más
+     * fuerte esté por encima de 1500 Hz (o por debajo de 40 Hz) también se
+     * abstendrá, porque el pico dominante no representa al fundamental. Se
+     * prefiere callar antes que arriesgar una lectura falsa.
+     */
+    private fun isClearlyOutOfRange(dominantPeakHz: Double?): Boolean {
+        if (dominantPeakHz == null || !dominantPeakHz.isFinite()) return false
+        return dominantPeakHz < minFrequencyHz * (1.0 - OUT_OF_RANGE_TOLERANCE) ||
+            dominantPeakHz > maxFrequencyHz * (1.0 + OUT_OF_RANGE_TOLERANCE)
+    }
+
+    /**
      * Raw harmonic salience is an unscaled FFT magnitude sum. Dividing by
      * frame RMS and FFT size makes it amplitude- and frame-size-independent;
      * the reference ratio maps a Hann-windowed sinusoid close to full scale.
@@ -123,5 +150,6 @@ class TunerEngine(
         const val CLEAR_AFTER_SECONDS = 0.200
         const val TUNED_ENTER_CENTS = 5.0
         const val TUNED_EXIT_CENTS = 8.0
+        const val OUT_OF_RANGE_TOLERANCE = 0.03
     }
 }

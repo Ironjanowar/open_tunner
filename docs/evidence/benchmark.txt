@@ -1,0 +1,10 @@
+Benchmark del motor DSP (JVM de host, sin emulador)
+Fecha: 2026-10-16T07:20:28Z
+Comando: ./gradlew --no-daemon --no-configuration-cache :dsp:test --tests 'com.cuwano.afinador.dsp.DetectorBenchmarkTest' --rerun-tasks -i
+Hardware: AMD Ryzen 7 9700X 8-Core Processor (16 nucleos)
+
+TunerEngine benchmark: frames=12, perFrameNanos=[2791599, 2729934, 2563552, 2564383, 2393364, 2381501, 2364569, 2333110, 2364530, 2363808, 2409002, 2246248], medianNanos=2393364, p95Nanos=2791599
+
+Lectura: mediana 2,39 ms y p95 2,79 ms por frame, con hop de 1024 muestras
+(21,3 ms a 48 kHz). El analisis consume ~13% del presupuesto de tiempo real en JVM de host.
+En dispositivo hay que medirlo; sigue pendiente en docs/instalacion.md.

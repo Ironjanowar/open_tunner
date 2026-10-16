@@ -19,6 +19,19 @@ class HarmonicSalienceDetector(
     private val windowed = FloatArray(frameSize)
     private val magnitudes = FloatArray(fft.spectrumSize)
 
+    /**
+     * Interpolated frequency of the strongest spectral peak in the most recently
+     * analyzed frame, or null when that frame carried no energy at all.
+     *
+     * The peak search skips the DC bin and the first couple of bins, where
+     * residual DC and the Hann main-lobe skirt of sub-audible rumble dominate,
+     * so this tracks a real partial rather than the low-bin noise floor. The
+     * caller uses it to confirm an observed tone actually sits inside the
+     * configured range before trusting a proposal that the range clamps.
+     */
+    var dominantPeakFrequencyHz: Double? = null
+        private set
+
     init {
         require(minFrequencyHz.isFinite() && minFrequencyHz > 0.0) {
             "minFrequencyHz must be finite and positive"
@@ -40,10 +53,14 @@ class HarmonicSalienceDetector(
             windowed[index] = sample
             energy += sample * sample.toDouble()
         }
-        if (energy <= SILENCE_ENERGY) return null
+        if (energy <= SILENCE_ENERGY) {
+            dominantPeakFrequencyHz = null
+            return null
+        }
 
         window.applyInPlace(windowed)
         fft.magnitudeSpectrum(windowed, magnitudes)
+        dominantPeakFrequencyHz = dominantPeakFrequency(sampleRate)
         val coarse = strongestCandidate(sampleRate) ?: return null
         val refined = refineByPeriod(samples, sampleRate, coarse.frequencyHz)
         return PitchProposal(
@@ -85,6 +102,29 @@ class HarmonicSalienceDetector(
         if (lower == magnitudes.lastIndex) return magnitudes[lower].toDouble()
         val fraction = bin - lower
         return magnitudes[lower] * (1.0 - fraction) + magnitudes[lower + 1] * fraction
+    }
+
+    /**
+     * Strongest magnitude bin outside the leading skirt, refined to sub-bin
+     * precision by parabolic interpolation so a dominant tone reports its true
+     * frequency rather than the nearest bin center.
+     */
+    private fun dominantPeakFrequency(sampleRate: Int): Double? {
+        var peakBin = -1
+        var peakMagnitude = 0.0f
+        for (bin in MIN_PEAK_BIN..magnitudes.lastIndex) {
+            if (magnitudes[bin] > peakMagnitude) {
+                peakMagnitude = magnitudes[bin]
+                peakBin = bin
+            }
+        }
+        if (peakBin < 0) return null
+        val offset = parabolicOffset(
+            magnitudes[(peakBin - 1).coerceAtLeast(0)].toDouble(),
+            magnitudes[peakBin].toDouble(),
+            magnitudes[(peakBin + 1).coerceAtMost(magnitudes.lastIndex)].toDouble(),
+        )
+        return (peakBin + offset) * sampleRate.toDouble() / frameSize
     }
 
     private fun refineByPeriod(samples: FloatArray, sampleRate: Int, frequencyHz: Double): Double {
@@ -134,5 +174,8 @@ class HarmonicSalienceDetector(
         const val MAX_HARMONICS = 8
         const val SEARCH_STEP_CENTS = 1.0
         const val SILENCE_ENERGY = 1e-12
+
+        /** DC and the first couple of bins are dominated by leakage, not partials. */
+        const val MIN_PEAK_BIN = 3
     }
 }

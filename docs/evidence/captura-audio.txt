@@ -1,0 +1,24 @@
+Evidencia de captura de microfono y liberacion en segundo plano
+Dispositivo: emulador fretboard-api37 (API 37, x86_64), 2026-10-16
+
+== 1. App en primer plano: sesion de grabacion activa ==
+## RecordActivityMonitor
+riid 79; active? true
+  session:81 -- source client=UNPROCESSED, dev=1ch 48000Hz ENCODING_PCM_16BIT -- uid:10236 -- patch:24 -- pack:com.cuwano.afinador -- format client=1ch 48000Hz ENCODING_PCM_FLOAT, dev=1ch 48000Hz ENCODING_PCM_16BIT -- silenced:false -- effects client=, dev=
+
+
+### Recording Activity
+
+== 2. Historial de grabacion (primer plano, luego HOME) ==
+### Recording Activity
+10-16 07:18:41:721 rec start riid:63 uid:10236 session:65 src:UNPROCESSED not silenced pack:com.cuwano.afinador
+10-16 07:18:50:275 rec stop riid:63 uid:10236 session:65 src:UNPROCESSED not silenced pack:com.cuwano.afinador
+10-16 07:19:03:559 rec start riid:71 uid:10236 session:73 src:UNPROCESSED not silenced pack:com.cuwano.afinador
+10-16 07:19:18:708 rec update riid:71 uid:10236 session:73 src:UNPROCESSED silenced pack:com.cuwano.afinador
+10-16 07:19:18:726 rec release riid:71 uid:10236 session:73 src:UNPROCESSED silenced pack:com.cuwano.afinador
+10-16 07:19:19:449 rec start riid:79 uid:10236 session:81 src:UNPROCESSED not silenced pack:com.cuwano.afinador
+10-16 07:19:26:960 rec stop riid:79 uid:10236 session:81 src:UNPROCESSED not silenced pack:com.cuwano.afinador
+
+
+== 3. Sesiones de grabacion tras HOME (debe estar vacio) ==
+sesiones_activas_tras_home=0
