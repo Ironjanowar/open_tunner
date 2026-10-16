@@ -28,8 +28,22 @@ class TunerCaptureCoordinator(private val session: TunerSession) {
         }
         return when (val state = session.state) {
             is TunerSessionState.Error -> TunerUiStateReducer.audioError(state.message)
-            TunerSessionState.Listening -> TunerUiStateReducer.listening(session.latestReading)
-            TunerSessionState.Stopped -> TunerUiState.ListeningSilence
+            TunerSessionState.Listening -> TunerUiStateReducer.listening(
+                session.latestReading?.let { reading ->
+                    // Only a live reading produced by the CURRENT run may show a note
+                    // as live or tuned. A note carried over from the previous run
+                    // (after a restart, before any frame arrives) is presented stale.
+                    if (session.runHasLiveReading) {
+                        reading
+                    } else {
+                        reading.copy(isLive = false, isTuned = false)
+                    }
+                },
+            )
+
+            TunerSessionState.Stopped -> session.latestReading
+                ?.let { TunerUiStateReducer.listening(it.copy(isLive = false, isTuned = false)) }
+                ?: TunerUiState.ListeningSilence
         }
     }
 

@@ -1,8 +1,8 @@
-Verificacion del APK de depuracion
-Fecha: 2026-10-16T07:16:05Z
+Verificacion del APK final de depuracion
+Fecha: 2026-10-16T10:31:57Z
 Artefacto: app/build/outputs/apk/debug/app-debug.apk
-Bytes: 11534209
-SHA-256: a6cc1185e9f941be86230f277d9c1518cfd51ff8c216006f2a4c1220a2a1696a
+Bytes: 11550593
+SHA-256: 8519da0af932f0b54481bb0dcc1f81da32e7be4e01f2585c5cf2f7458f35a87b
 
 == apksigner verify --verbose --print-certs ==
 Verifies
@@ -24,94 +24,8 @@ Signer #1 public key SHA-1 digest: c3ae15e4dec0019482f2375303ca707bf0acfdbb
 Signer #1 public key MD5 digest: fff1691f08a3ba71462f9757ddc584fa
 
 == aapt2 dump badging (extracto) ==
-package: name='com.cuwano.afinador' versionCode='1' versionName='0.1.0' platformBuildVersionName='17' platformBuildVersionCode='37' compileSdkVersion='37' compileSdkVersionCodename='17'
+package: name='com.cuwano.afinador' versionCode='2' versionName='0.2.0' platformBuildVersionName='17' platformBuildVersionCode='37' compileSdkVersion='37' compileSdkVersionCodename='17'
 targetSdkVersion:'37'
-application-label:'Afinador'
-application-label-af:'Afinador'
-application-label-am:'Afinador'
-application-label-ar:'Afinador'
-application-label-as:'Afinador'
-application-label-az:'Afinador'
-application-label-be:'Afinador'
-application-label-bg:'Afinador'
-application-label-bn:'Afinador'
-application-label-bs:'Afinador'
-application-label-ca:'Afinador'
-application-label-cs:'Afinador'
-application-label-da:'Afinador'
-application-label-de:'Afinador'
-application-label-el:'Afinador'
-application-label-en-AU:'Afinador'
-application-label-en-CA:'Afinador'
-application-label-en-GB:'Afinador'
-application-label-en-IN:'Afinador'
-application-label-en-XC:'Afinador'
-application-label-es:'Afinador'
-application-label-es-US:'Afinador'
-application-label-et:'Afinador'
-application-label-eu:'Afinador'
-application-label-fa:'Afinador'
-application-label-fi:'Afinador'
-application-label-fr:'Afinador'
-application-label-fr-CA:'Afinador'
-application-label-gl:'Afinador'
-application-label-gu:'Afinador'
-application-label-hi:'Afinador'
-application-label-hr:'Afinador'
-application-label-hu:'Afinador'
-application-label-hy:'Afinador'
-application-label-in:'Afinador'
-application-label-is:'Afinador'
-application-label-it:'Afinador'
-application-label-iw:'Afinador'
-application-label-ja:'Afinador'
-application-label-ka:'Afinador'
-application-label-kk:'Afinador'
-application-label-km:'Afinador'
-application-label-kn:'Afinador'
-application-label-ko:'Afinador'
-application-label-ky:'Afinador'
-application-label-lo:'Afinador'
-application-label-lt:'Afinador'
-application-label-lv:'Afinador'
-application-label-mk:'Afinador'
-application-label-ml:'Afinador'
-application-label-mn:'Afinador'
-application-label-mr:'Afinador'
-application-label-ms:'Afinador'
-application-label-my:'Afinador'
-application-label-nb:'Afinador'
-application-label-ne:'Afinador'
-application-label-nl:'Afinador'
-application-label-or:'Afinador'
-application-label-pa:'Afinador'
-application-label-pl:'Afinador'
-application-label-pt:'Afinador'
-application-label-pt-BR:'Afinador'
-application-label-pt-PT:'Afinador'
-application-label-ro:'Afinador'
-application-label-ru:'Afinador'
-application-label-si:'Afinador'
-application-label-sk:'Afinador'
-application-label-sl:'Afinador'
-application-label-sq:'Afinador'
-application-label-sr:'Afinador'
-application-label-sr-Latn:'Afinador'
-application-label-sv:'Afinador'
-application-label-sw:'Afinador'
-application-label-ta:'Afinador'
-application-label-te:'Afinador'
-application-label-th:'Afinador'
-application-label-tl:'Afinador'
-application-label-tr:'Afinador'
-application-label-uk:'Afinador'
-application-label-ur:'Afinador'
-application-label-uz:'Afinador'
-application-label-vi:'Afinador'
-application-label-zh-CN:'Afinador'
-application-label-zh-HK:'Afinador'
-application-label-zh-TW:'Afinador'
-application-label-zu:'Afinador'
 launchable-activity: name='com.cuwano.afinador.MainActivity'  label='' icon=''
 native-code: 'arm64-v8a' 'armeabi-v7a' 'x86' 'x86_64'
 
@@ -120,26 +34,3 @@ package: com.cuwano.afinador
 uses-permission: name='android.permission.RECORD_AUDIO'
 permission: com.cuwano.afinador.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
 uses-permission: name='com.cuwano.afinador.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION'
-
-== versionCode / versionName ==
-{
-  "version": 3,
-  "artifactType": {
-    "type": "APK",
-    "kind": "Directory"
-  },
-  "applicationId": "com.cuwano.afinador",
-  "variantName": "debug",
-  "elements": [
-    {
-      "type": "SINGLE",
-      "filters": [],
-      "attributes": [],
-      "versionCode": 1,
-      "versionName": "0.1.0",
-      "outputFile": "app-debug.apk"
-    }
-  ],
-  "elementType": "File",
-  "minSdkVersionForDexing": 26
-}

@@ -2,12 +2,15 @@ package com.cuwano.afinador.tuner
 
 import com.cuwano.afinador.audio.AudioInput
 import com.cuwano.afinador.audio.AudioInputFactory
+import com.cuwano.afinador.dsp.SensitivityProfile
 import com.cuwano.afinador.dsp.TunerReading
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -92,6 +95,10 @@ class TunerSessionTest {
         assertEquals(1, processor.resetCalls.get())
         assertEquals(1, input.stopCalls.get())
         assertEquals(1, input.releaseCalls.get())
+        // Deliberate spec change: stop() no longer drops a displayed note. This stays
+        // null only because that late read was never processed, so nothing was ever
+        // published -- not because stop() cleared it. The survival contract itself is
+        // pinned by `a displayed note survives stop and start`.
         assertNull(session.latestReading)
         assertIs<TunerSessionState.Stopped>(session.state)
 
@@ -120,6 +127,7 @@ class TunerSessionTest {
             assertTrue("error state needs a user-visible message", error.message.isNotBlank())
             assertEquals(1, input.releaseCalls.get())
             assertEquals(0, processor.acceptCalls.get())
+            // An audio error is one of the few events that clears the held note.
             assertNull(session.latestReading)
         } finally {
             session.stop()
@@ -148,6 +156,135 @@ class TunerSessionTest {
         session.stop()
     }
 
+    @Test
+    fun `sensitivity defaults to the factory default and applies to the running processor`() {
+        val input = BlockingAudioInput(sampleRate = 48_000)
+        val processor = RecordingProcessor()
+        val session = TunerSession(
+            audioInputFactory = AudioInputFactory { input },
+            processorFactory = { processor },
+            captureBufferSize = 8,
+        )
+
+        try {
+            session.start()
+            assertTrue("audio input did not start", input.awaitStarted())
+            awaitCondition("session did not enter listening state") {
+                session.state is TunerSessionState.Listening
+            }
+
+            assertEquals(SensitivityProfile.DEFAULT, session.sensitivity)
+
+            session.setSensitivity(SensitivityProfile.MUY_ALTA)
+
+            assertEquals(SensitivityProfile.MUY_ALTA, session.sensitivity)
+            awaitCondition("the running processor did not receive the new profile") {
+                processor.profiles.lastOrNull() == SensitivityProfile.MUY_ALTA
+            }
+            assertEquals("setSensitivity must not restart capture", 1, input.startCalls.get())
+            assertEquals("setSensitivity must not stop capture", 0, input.stopCalls.get())
+            assertIs<TunerSessionState.Listening>(session.state)
+        } finally {
+            session.stop()
+        }
+    }
+
+    @Test
+    fun `sensitivity set before start configures the processor created later`() {
+        val input = BlockingAudioInput(sampleRate = 48_000)
+        val processor = RecordingProcessor()
+        val session = TunerSession(
+            audioInputFactory = AudioInputFactory { input },
+            processorFactory = { processor },
+            captureBufferSize = 8,
+        )
+
+        try {
+            assertEquals(SensitivityProfile.DEFAULT, session.sensitivity)
+            session.setSensitivity(SensitivityProfile.SUAVE)
+            assertEquals(SensitivityProfile.SUAVE, session.sensitivity)
+
+            session.start()
+            assertTrue("audio input did not start", input.awaitStarted())
+            awaitCondition("the processor created later did not receive the profile") {
+                processor.profiles.lastOrNull() == SensitivityProfile.SUAVE
+            }
+        } finally {
+            session.stop()
+        }
+    }
+
+    @Test
+    fun `a null reading keeps the displayed note as a stale note until a live frame arrives`() {
+        val input = BlockingAudioInput(sampleRate = 48_000)
+        val expectedReading = reading(frequencyHz = 440.0)
+        // A freshly rebuilt engine (the app is resumed with a new session) publishes
+        // null for its first frames -- that must not wipe the note already on screen.
+        val processor = ScriptedProcessor(listOf(expectedReading, null, null, expectedReading))
+        val session = TunerSession(
+            audioInputFactory = AudioInputFactory { input },
+            processorFactory = { processor },
+            captureBufferSize = 8,
+        )
+
+        try {
+            session.start()
+            assertTrue("audio input did not start", input.awaitStarted())
+            input.enqueue(samples = floatArrayOf(0.1f), validCount = 1)
+            assertTrue("processor did not receive captured samples", processor.awaitAccepted())
+            awaitCondition("latest reading was not published") { session.latestReading == expectedReading }
+
+            // Two null frames arrive while the note is displayed.
+            input.enqueue(samples = floatArrayOf(0.1f), validCount = 1)
+            input.enqueue(samples = floatArrayOf(0.1f), validCount = 1)
+            awaitCondition("the null readings were not processed") { processor.acceptCalls.get() >= 3 }
+
+            val held = session.latestReading
+                ?: error("a null reading wiped the displayed note")
+            assertEquals(expectedReading.noteName, held.noteName)
+            assertEquals(expectedReading.octave, held.octave)
+            assertEquals(expectedReading.frequencyHz, held.frequencyHz, 0.0)
+            assertFalse("a note held across null frames must be presented as stale", held.isLive)
+
+            // It must only be presented live again once a genuinely live frame arrives.
+            input.enqueue(samples = floatArrayOf(0.1f), validCount = 1)
+            awaitCondition("the replacement live reading was not processed") {
+                session.latestReading?.isLive == true
+            }
+            assertEquals(expectedReading, session.latestReading)
+        } finally {
+            session.stop()
+        }
+    }
+
+    @Test
+    fun `a displayed note survives stop and start`() {
+        val input = BlockingAudioInput(sampleRate = 48_000)
+        val expectedReading = reading(frequencyHz = 440.0)
+        val processor = RecordingProcessor(readingToPublish = expectedReading)
+        val session = TunerSession(
+            audioInputFactory = AudioInputFactory { input },
+            processorFactory = { processor },
+            captureBufferSize = 8,
+        )
+
+        try {
+            session.start()
+            assertTrue("audio input did not start", input.awaitStarted())
+            input.enqueue(samples = floatArrayOf(0.1f, 0.2f, 99f, 100f), validCount = 2)
+            assertTrue("processor did not receive captured samples", processor.awaitAccepted())
+            awaitCondition("latest reading was not published") { session.latestReading == expectedReading }
+
+            session.stop()
+            assertEquals("stop must not drop the displayed note", expectedReading, session.latestReading)
+
+            session.start()
+            assertEquals("start must not drop the displayed note", expectedReading, session.latestReading)
+        } finally {
+            session.stop()
+        }
+    }
+
     private class RecordingProcessor(
         private val readingToPublish: TunerReading? = null,
     ) : TunerProcessor {
@@ -155,6 +292,7 @@ class TunerSessionTest {
         val resetCalls = AtomicInteger()
         val counts = mutableListOf<Int>()
         val samplePrefixes = mutableListOf<List<Float>>()
+        val profiles = CopyOnWriteArrayList<SensitivityProfile>()
         private val accepted = CountDownLatch(1)
 
         override fun accept(samples: FloatArray, count: Int, onReading: (TunerReading?) -> Unit) {
@@ -171,6 +309,30 @@ class TunerSessionTest {
             resetCalls.incrementAndGet()
         }
 
+        override fun setProfile(profile: SensitivityProfile) {
+            profiles += profile
+        }
+
+        fun awaitAccepted(): Boolean = accepted.await(TIMEOUT_SECONDS, TimeUnit.SECONDS)
+    }
+
+    /** Publishes a scripted sequence of readings, `null` entries included. */
+    private class ScriptedProcessor(
+        private val script: List<TunerReading?>,
+    ) : TunerProcessor {
+        val acceptCalls = AtomicInteger()
+        private val accepted = CountDownLatch(1)
+
+        override fun accept(samples: FloatArray, count: Int, onReading: (TunerReading?) -> Unit) {
+            val index = acceptCalls.getAndIncrement()
+            onReading(if (index < script.size) script[index] else script.lastOrNull())
+            accepted.countDown()
+        }
+
+        override fun reset() = Unit
+
+        override fun setProfile(profile: SensitivityProfile) = Unit
+
         fun awaitAccepted(): Boolean = accepted.await(TIMEOUT_SECONDS, TimeUnit.SECONDS)
     }
 
@@ -179,10 +341,12 @@ class TunerSessionTest {
     ) : AudioInput {
         private val events = LinkedBlockingQueue<ReadEvent>()
         private val started = CountDownLatch(1)
+        val startCalls = AtomicInteger()
         val stopCalls = AtomicInteger()
         val releaseCalls = AtomicInteger()
 
         override fun start() {
+            startCalls.incrementAndGet()
             started.countDown()
         }
 

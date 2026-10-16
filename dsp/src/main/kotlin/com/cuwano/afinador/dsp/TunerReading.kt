@@ -8,6 +8,7 @@ data class TunerReading(
     val cents: Double,
     val confidence: Double,
     val isTuned: Boolean,
+    val isLive: Boolean = true,
     val rms: Double,
     val clipped: Boolean,
 )

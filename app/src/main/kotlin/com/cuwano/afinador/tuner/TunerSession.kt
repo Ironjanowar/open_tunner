@@ -2,6 +2,7 @@ package com.cuwano.afinador.tuner
 
 import com.cuwano.afinador.audio.AudioInput
 import com.cuwano.afinador.audio.AudioInputFactory
+import com.cuwano.afinador.dsp.SensitivityProfile
 import com.cuwano.afinador.dsp.TunerReading
 
 sealed interface TunerSessionState {
@@ -26,6 +27,23 @@ class TunerSession(
     var latestReading: TunerReading? = null
         private set
 
+    /**
+     * Whether the CURRENT capture run has published at least one live reading.
+     * Cleared in [start], set when a published reading with [TunerReading.isLive]
+     * true arrives. The coordinator reads it so a note held on screen across a
+     * stop/start is not presented as live (or tuned) until the rebuilt run itself
+     * hears something; [latestReading] keeps the previous note even so, so the
+     * survivor contract of `a displayed note survives stop and start` holds.
+     */
+    @Volatile
+    var runHasLiveReading: Boolean = false
+        private set
+
+    /** Detector sensitivity applied to the current and every future processor. */
+    @Volatile
+    var sensitivity: SensitivityProfile = SensitivityProfile.DEFAULT
+        private set
+
     @Volatile
     private var running = false
 
@@ -44,7 +62,11 @@ class TunerSession(
         synchronized(lifecycleLock) {
             if (running) return
 
-            latestReading = null
+            // A new run has not heard anything yet: the note still on screen from
+            // the previous run must not be shown as live or tuned until this run
+            // publishes its own live reading.
+            runHasLiveReading = false
+
             var startedInput: AudioInput? = null
             var lastFailure: Throwable? = null
 
@@ -89,6 +111,7 @@ class TunerSession(
             val workerGeneration = generation
             input = startedInput
             processor = startedProcessor
+            startedProcessor.setProfile(sensitivity)
             running = true
             state = TunerSessionState.Listening
             worker = Thread(
@@ -105,7 +128,6 @@ class TunerSession(
             val activeWorker = worker
             if (activeInput == null && activeProcessor == null && activeWorker == null) {
                 running = false
-                latestReading = null
                 state = TunerSessionState.Stopped
                 return
             }
@@ -115,7 +137,6 @@ class TunerSession(
             input = null
             processor = null
             worker = null
-            latestReading = null
             state = TunerSessionState.Stopped
             Resources(activeInput, activeProcessor, activeWorker)
         }
@@ -131,6 +152,15 @@ class TunerSession(
         }
         resources.input?.releaseSafely()
         resources.processor?.reset()
+    }
+
+    /**
+     * Applies a new sensitivity without restarting capture: the running
+     * processor is updated in place and any processor created later inherits it.
+     */
+    fun setSensitivity(profile: SensitivityProfile) {
+        sensitivity = profile
+        synchronized(lifecycleLock) { processor }?.setProfile(profile)
     }
 
     private fun captureLoop(
@@ -170,13 +200,25 @@ class TunerSession(
 
             try {
                 ownedProcessor.accept(buffer, count) { reading ->
-                    if (isCurrent(workerGeneration)) latestReading = reading
+                    if (isCurrent(workerGeneration)) publish(reading)
                 }
             } catch (failure: Throwable) {
                 failWorker(ownedInput, ownedProcessor, workerGeneration, failure.message)
                 return
             }
         }
+    }
+
+    /**
+     * A null reading (a freshly rebuilt engine's first frames, or a frame with no
+     * pitch) must not wipe a note already on screen: it is re-published as a
+     * stale copy of the note currently displayed. Only a genuinely live reading
+     * can bring the displayed note back live, and a live reading also marks the
+     * current run as having heard something.
+     */
+    private fun publish(reading: TunerReading?) {
+        if (reading != null && reading.isLive) runHasLiveReading = true
+        latestReading = reading ?: latestReading?.copy(isLive = false)
     }
 
     private fun isCurrent(workerGeneration: Long): Boolean =

@@ -21,11 +21,13 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -41,6 +43,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.testTag
+import com.cuwano.afinador.dsp.SensitivityProfile
 import com.cuwano.afinador.tuner.TunerUiState
 
 object TunerScreenTags {
@@ -48,6 +51,8 @@ object TunerScreenTags {
     const val Note = "tuner_note"
     const val CentsGauge = "cents_gauge"
     const val PermissionAction = "permission_action"
+    const val Sensitivity = "sensitivity_slider"
+    const val SensitivityLabel = "sensitivity_label"
 }
 
 private val DeepNavy = Color(0xFF071019)
@@ -58,9 +63,13 @@ private val Cyan = Color(0xFF65D8E5)
 private val TunedGreen = Color(0xFF62E6A7)
 private val Amber = Color(0xFFFFC66D)
 
+private const val STALE_ALPHA = 0.55f
+
 @Composable
 fun TunerScreen(
     state: TunerUiState,
+    sensitivity: SensitivityProfile,
+    onSensitivityChange: (SensitivityProfile) -> Unit,
     onRequestPermission: () -> Unit,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
@@ -110,6 +119,8 @@ fun TunerScreen(
                             body = state.message,
                         )
                     }
+                    Spacer(Modifier.height(if (compact) 18.dp else 28.dp))
+                    SensitivityControl(sensitivity, onSensitivityChange)
                 }
             }
         }
@@ -137,7 +148,11 @@ private fun Header(compact: Boolean) {
 @Composable
 private fun ReadingPanel(state: TunerUiState.Reading, compact: Boolean) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        // A held note stays on screen but is dimmed, so a stale reading can never
+        // be mistaken for a live one.
+        modifier = Modifier
+            .fillMaxWidth()
+            .alpha(if (state.isLive) 1f else STALE_ALPHA),
         shape = RoundedCornerShape(28.dp),
         colors = CardDefaults.cardColors(containerColor = CardNavy),
         elevation = CardDefaults.cardElevation(defaultElevation = 10.dp),
@@ -194,12 +209,12 @@ private fun ReadingPanel(state: TunerUiState.Reading, compact: Boolean) {
 
 @Composable
 private fun StatusPill(state: TunerUiState.Reading) {
-    val text = when {
-        state.isTuned -> "Afinado"
-        state.cents > 0.0 -> "Demasiado alto"
-        else -> "Demasiado bajo"
+    val text = state.statusText
+    val accent = when {
+        state.isStale -> MutedText
+        state.isTuned -> TunedGreen
+        else -> Amber
     }
-    val accent = if (state.isTuned) TunedGreen else Amber
     Row(
         modifier = Modifier
             .clip(CircleShape)
@@ -283,6 +298,60 @@ private fun MetricCard(label: String, value: String, modifier: Modifier = Modifi
                 modifier = Modifier.padding(top = 3.dp),
             )
         }
+    }
+}
+
+@Composable
+private fun SensitivityControl(
+    sensitivity: SensitivityProfile,
+    onSensitivityChange: (SensitivityProfile) -> Unit,
+) {
+    val selectedIndex = SensitivityUi.indexOf(sensitivity)
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = "Sensibilidad",
+            color = MutedText,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+        )
+        Slider(
+            value = selectedIndex.toFloat(),
+            onValueChange = { onSensitivityChange(SensitivityUi.profileAt(it)) },
+            valueRange = 0f..SensitivityUi.levels.lastIndex.toFloat(),
+            steps = SensitivityUi.sliderSteps,
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag(TunerScreenTags.Sensitivity),
+        )
+        // The five level names are always readable as tick labels under the
+        // slider, so the player can see every option and not only the current
+        // one.
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            SensitivityUi.labels.forEachIndexed { index, label ->
+                Text(
+                    text = label,
+                    color = if (index == selectedIndex) Cyan else MutedText,
+                    fontSize = 11.sp,
+                    fontWeight = if (index == selectedIndex) FontWeight.Bold else FontWeight.Normal,
+                    modifier = Modifier.testTag("SensitivityTick_$index"),
+                )
+            }
+        }
+        Text(
+            text = SensitivityUi.label(sensitivity),
+            color = Cyan,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier
+                .padding(top = 6.dp)
+                .testTag(TunerScreenTags.SensitivityLabel),
+        )
     }
 }
 

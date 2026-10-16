@@ -69,6 +69,35 @@ class HarmonicSalienceDetector(
         )
     }
 
+    /**
+     * Strength of the first upper partials relative to the fundamental at
+     * [frequencyHz] in the most recently analyzed frame: the largest
+     * interpolated magnitude of 2f and 3f divided by the fundamental's.
+     *
+     * A real string always carries upper harmonics, so this ratio stays well
+     * above the engine's support threshold. A mains hum is a nearly pure sine,
+     * so its 2f/3f energy is only the window leakage of the fundamental and the
+     * ratio collapses toward zero. That difference lets the engine reject hum
+     * by structure instead of by a blunt level floor.
+     *
+     * Reuses the magnitudes already produced by [propose] and allocates nothing.
+     */
+    fun harmonicSupportRatio(frequencyHz: Double, sampleRate: Int): Double {
+        if (magnitudes.isEmpty() || !frequencyHz.isFinite() || frequencyHz <= 0.0) return 0.0
+        if (sampleRate <= 0) return 0.0
+        val fundamental = interpolatedMagnitude(frequencyHz * frameSize / sampleRate)
+        if (fundamental <= 0.0) return 0.0
+        val nyquist = sampleRate / 2.0
+        var strongest = 0.0
+        var harmonic = 2
+        while (harmonic <= MAX_SUPPORT_HARMONIC && harmonic * frequencyHz <= nyquist) {
+            val magnitude = interpolatedMagnitude(harmonic * frequencyHz * frameSize / sampleRate)
+            if (magnitude > strongest) strongest = magnitude
+            harmonic++
+        }
+        return strongest / fundamental
+    }
+
     private fun strongestCandidate(sampleRate: Int): PitchProposal? {
         val step = 2.0.pow(SEARCH_STEP_CENTS / 1200.0)
         var frequency = minFrequencyHz
@@ -172,6 +201,9 @@ class HarmonicSalienceDetector(
 
     private companion object {
         const val MAX_HARMONICS = 8
+
+        /** Only 2f and 3f are inspected for the hum-versus-string structure check. */
+        const val MAX_SUPPORT_HARMONIC = 3
         const val SEARCH_STEP_CENTS = 1.0
         const val SILENCE_ENERGY = 1e-12
 

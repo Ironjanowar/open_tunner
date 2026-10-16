@@ -4,64 +4,84 @@
 
 - Salience armónica es el detector principal.
 - YIN aporta contraste y confianza, en especial ante errores de octava.
-- DSP en Kotlin puro; solo se migraría a nativo si un benchmark en dispositivo lo
-  justificara. El benchmark en host deja margen amplio, así que no procede.
-- Rango: 40–1500 Hz. A4 fijo a 440 Hz.
-- El estado «Afinado» entra en ±5 cents y sale al superar ±8 cents.
+- DSP en Kotlin puro; solo se migraría a Rust/NDK si un benchmark lo justificara, y el
+  benchmark actual no lo justifica.
+- Rango 40–1500 Hz, A4 = 440 Hz fijo, notas con sostenidos.
 
-## Cadena implementada
+## Cadena de análisis
 
-`SampleRingBuffer` (4096 muestras, hop 1024) → `SignalMetrics` (media DC, RMS,
-clipping; la entrada original nunca se muta; se analiza la señal sin DC) →
-`HannWindow` + `Radix2RealFft` → `HarmonicSalienceDetector` (propuesta primaria) →
-`YinDetector` (contraste y octava) → `AdaptiveNoiseFloor` (gate) → `PitchTracker`
-(estabilidad, corrección de octava, caducidad, histéresis) → `TunerEngine`
-(`TunerReading` inmutable).
+1. `SampleRingBuffer` acumula muestras y entrega frames solapados de 4096 con hop de 1024.
+2. `SignalMetrics` quita la continua y mide RMS y clipping **sobre la señal original**.
+3. `InputNormalizer` ajusta el nivel del frame de análisis (ganancia de solo amplificar,
+   acotada por perfil y con la salida limitada a [-1, 1]). Es una ayuda para el análisis
+   espectral, nunca una puerta de decisión.
+4. `HannWindow` + `Radix2RealFft` dan el espectro.
+5. `HarmonicSalienceDetector` propone la fundamental recorriendo hasta 8 armónicos con
+   interpolación parabólica, y expone el soporte armónico (energía en 2f/3f frente a la
+   fundamental) que se usa para distinguir una cuerda de un zumbido.
+6. `YinDetector` da una segunda opinión y confianza; corrige errores de octava.
+7. `AdaptiveNoiseFloor` estima el ruido de fondo de la sala solo con frames en los que no
+   se ha aceptado ninguna nota, de modo que una nota sostenida nunca arrastra el suelo.
+8. `PitchTracker` decide estabilidad, suaviza en cents y aplica la histéresis de afinado.
+9. `TunerEngine` ordena todo lo anterior y emite `TunerReading` con `isLive`.
 
-## Parámetros y unidades
+## Todas las puertas se miden en el dominio real de la señal
 
-Configuración centralizada en las constantes privadas de `TunerEngine`:
+Este es el punto que más costó acertar. Si la decisión de "¿esto es una nota?" se toma
+sobre la señal ya normalizada, el amplificador puede empujar un zumbido flojo por encima
+del umbral y el afinador inventa notas. Por eso:
 
-| Parámetro | Valor | Unidad / significado |
-| --- | --- | --- |
-| `frameSize` | 4096 | muestras |
-| `hopSize` | 1024 | muestras (~21,3 ms a 48 kHz) |
-| `YIN_CMND_THRESHOLD` | 0,15 | umbral de dip sobre CMND normalizado |
-| `MINIMUM_PRIMARY_SALIENCE` | 0,35 | salience normalizada 0–1 |
-| `MINIMUM_RELIABLE_YIN_CONFIDENCE` | 0,70 | 1 − CMND |
-| `MINIMUM_YIN_CONFIDENCE` | 0,80 | confianza mínima para corregir octava |
-| `MINIMUM_SIGNAL_TO_NOISE_RATIO` | 3,0 | RMS señal / RMS ruido |
-| `INITIAL_NOISE_RMS` | 0,010 | RMS normalizado |
-| `MINIMUM_NOISE_RMS` | 0,002 | suelo absoluto, nunca cero |
-| `NOISE_HALF_LIFE_SECONDS` | 5,0 | s, vida media del suelo adaptativo |
-| `SMOOTHING_HALF_LIFE_SECONDS` | 0,025 | s, suavizado exponencial en log-frecuencia |
-| `CHANGE_CONFIRMATION_SECONDS` | 0,080 | s, confirmación de cambio persistente |
-| `CLEAR_AFTER_SECONDS` | 0,200 | s de debilidad sostenida para liberar la nota |
-| `TUNED_ENTER_CENTS` / `TUNED_EXIT_CENTS` | 5,0 / 8,0 | cents, histéresis visual |
+- El nivel y el ruido de fondo se miden **antes** de normalizar.
+- La normalización solo condiciona el análisis espectral (salience y YIN).
+- El clipping se juzga en el frame original: una señal que solo se pasa de rango al
+  amplificarla no es una señal recortada.
 
-La normalización de salience divide la suma cruda de magnitudes por
-`frameSize × RMS × 0,25`, de modo que la puntuación es independiente de la amplitud
-y del tamaño de frame y comparable con el umbral 0,35.
+## Niveles de sensibilidad
 
-## Decisiones de robustez
+El deslizador elige uno de cinco perfiles. `minimumNoteRms` es la palanca real de "qué
+flojo puede ser una nota", y se aplica con la misma regla a todas las frecuencias.
 
-- El suavizado y la caducidad dependen del tiempo transcurrido, no del número de
-  callbacks: el comportamiento es equivalente con distinto hop.
-- El suavizado se aplica en espacio logarítmico (cents), no en Hz lineales.
-- Los cambios persistentes de nota se confirman en el tiempo, pero el movimiento
-  coherente y continuo (glissando) progresa; los saltos aislados de octava se rechazan.
-- El suelo de ruido nunca aprende de una nota fiable, de un frame con clipping ni de
-  una señal más fuerte que el propio umbral del gate, así que arrancar con una nota
-  ya sonando no la absorbe.
-- El clipping cierra el gate y no adquiere ni refresca pitch: se rechaza o degrada,
-  nunca se finge precisión.
-- YIN devuelve `null` para tonos fuera de rango en lugar de recortarlos al extremo.
-- La confianza solo promedia YIN cuando esa observación es relevante; una lectura
-  fuerte sin YIN no queda penalizada a la mitad.
-- Todos los componentes reutilizan buffers y están confinados a un único consumidor;
-  `TunerSession` los usa desde un solo worker y `TunerEngine` no es reentrante.
+| Nivel | `minimumNoteRms` | Ganancia máxima | Salience mínima | SNR | Suelo mínimo |
+| --- | --- | --- | --- | --- | --- |
+| Muy suave | 0,030 | 3× | 0,50 | 5,0 | 0,004 |
+| Suave | 0,020 | 5× | 0,42 | 3,5 | 0,003 |
+| Normal | 0,012 | 8× | 0,35 | 2,0 | 0,002 |
+| Alta (de fábrica) | 0,006 | 12× | 0,30 | 1,5 | 0,0012 |
+| Muy alta | 0,003 | 16× | 0,26 | 1,2 | 0,0008 |
 
-Estos parámetros se validaron con corpus sintético determinista reproducible; no se
-trasladó código, pseudocódigo ni constantes propietarias de GuitarTuna. Las constantes
-del análisis previo de GuitarTuna se usaron solo como referencia de diseño y ninguna
-se adoptó sin una prueba propia que la respaldara.
+Todos los valores son estrictamente monótonos: al subir de nivel baja el umbral de nota,
+baja la exigencia de claridad y de relación señal/ruido, y sube la ganancia máxima.
+
+## Zumbido de red frente a cuerda
+
+Un zumbido de red es casi una onda pura: no tiene 2f ni 3f. Una cuerda siempre los trae.
+Por eso, para candidatos **por debajo de 150 Hz** y que no sean claramente fuertes, se
+exige soporte armónico (`MINIMUM_HARMONIC_SUPPORT = 0,08`; medido: 0,0002–0,004 en un
+zumbido puro y 0,47–0,57 en una cuerda simulada). Un candidato claramente fuerte
+(`CLEARLY_LOUD_RMS = 0,05`, unos −26 dBFS) se acepta sin exigir esa estructura, para no
+penalizar señales puras de laboratorio ni notas graves tocadas con fuerza.
+
+Compromiso declarado: un tono puro y flojo por debajo de 150 Hz que no venga de una
+cuerda se trata como ambiente y no se muestra. Antes esto se resolvía con un umbral de
+nivel fijo que dejaba mudas las cuerdas graves tocadas flojo; se descartó por eso.
+
+## Seguimiento, estabilidad y «última nota»
+
+- Suavizado exponencial en cents con semivida de 25 ms.
+- Confirmación de cambio de nota en 80 ms; los saltos de octava aislados se rechazan.
+- Histéresis: entra en «Afinado» a ±5 cents y no sale hasta superar ±8.
+- `STALE_AFTER_SECONDS = 0,600`: pasados 0,6 s sin evidencia, la nota se mantiene con
+  `isLive = false` e `isTuned = false`. El motor no vuelve a `null` una vez que ha
+  detectado algo: la última nota solo la sustituye otra nota, un error de audio o un
+  reinicio del proceso.
+- La frescura se decide fuera del motor: el coordinador marca la lectura como viva solo
+  si el motor ha publicado una lectura viva en la ejecución actual, así al volver del
+  segundo plano la nota anterior nunca se presenta como activa.
+
+## Compromisos aceptados
+
+- El suelo de ruido aprende solo de frames sin nota aceptada: una nota muy sostenida
+  nunca engaña al detector subiéndole el suelo.
+- La normalización no mejora la relación señal/ruido (es la misma ganancia para señal y
+  ruido); lo que elimina es la dependencia del nivel absoluto de entrada.
+- La medición en dispositivo real sigue pendiente y no se presenta como hecha.

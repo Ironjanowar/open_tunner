@@ -24,9 +24,9 @@ data class TrackedPitch(
 
 /** Applies quality gates, octave correction, smoothing, expiry, and tuned hysteresis. */
 class PitchTracker(
-    private val minimumPrimarySalience: Double,
+    minimumPrimarySalience: Double,
     private val minimumYinConfidenceForOctaveCorrection: Double,
-    private val minimumSignalToNoiseRatio: Double,
+    minimumSignalToNoiseRatio: Double,
     private val smoothingHalfLifeSeconds: Double,
     private val changeConfirmationSeconds: Double,
     private val clearAfterSeconds: Double,
@@ -35,6 +35,27 @@ class PitchTracker(
 ) {
     var current: TrackedPitch? = null
         private set
+
+    /**
+     * Primary-salience gate. Mutable so the owning [TunerEngine] can retarget it
+     * when the user changes sensitivity; the engine is the single consumer.
+     */
+    var minimumPrimarySalience: Double = minimumPrimarySalience
+        set(value) {
+            require(value.isFinite() && value in 0.0..1.0) {
+                "minimumPrimarySalience must be a finite fraction"
+            }
+            field = value
+        }
+
+    /** Frame-over-floor gate; retargeted per sensitivity by the engine. */
+    var minimumSignalToNoiseRatio: Double = minimumSignalToNoiseRatio
+        set(value) {
+            require(value.isFinite() && value > 0.0) {
+                "minimumSignalToNoiseRatio must be finite and positive"
+            }
+            field = value
+        }
 
     private var weakSeconds = 0.0
     private var tuned = false

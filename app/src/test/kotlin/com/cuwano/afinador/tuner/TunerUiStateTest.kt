@@ -70,6 +70,64 @@ class TunerUiStateTest {
         )
     }
 
+    @Test
+    fun `listening maps the reading liveness into the ui state`() {
+        val live = TunerUiStateReducer.listening(reading(isLive = true)) as TunerUiState.Reading
+        assertTrue(live.isLive)
+        assertFalse(live.isStale)
+
+        val held = TunerUiStateReducer.listening(reading(isLive = false)) as TunerUiState.Reading
+        assertFalse(held.isLive)
+        assertTrue(held.isStale)
+    }
+
+    @Test
+    fun `status text reports afinado for a live tuned note`() {
+        val state = reducedReading(cents = 0.0, isTuned = true, isLive = true)
+
+        assertEquals("Afinado", state.statusText)
+        assertFalse(state.isStale)
+    }
+
+    @Test
+    fun `status text reports demasiado alto for a live sharp note`() {
+        val state = reducedReading(cents = 12.0, isTuned = false, isLive = true)
+
+        assertEquals("Demasiado alto", state.statusText)
+        assertFalse(state.isStale)
+    }
+
+    @Test
+    fun `status text reports demasiado bajo for a live flat note`() {
+        val state = reducedReading(cents = -12.0, isTuned = false, isLive = true)
+
+        assertEquals("Demasiado bajo", state.statusText)
+        assertFalse(state.isStale)
+    }
+
+    @Test
+    fun `status text reports ultima nota for any held note regardless of tuning`() {
+        val tuned = reducedReading(cents = 0.0, isTuned = true, isLive = false)
+        assertEquals("Última nota", tuned.statusText)
+        assertTrue(tuned.isStale)
+
+        val sharp = reducedReading(cents = 30.0, isTuned = false, isLive = false)
+        assertEquals("Última nota", sharp.statusText)
+        assertTrue(sharp.isStale)
+
+        val flat = reducedReading(cents = -30.0, isTuned = false, isLive = false)
+        assertEquals("Última nota", flat.statusText)
+        assertTrue(flat.isStale)
+    }
+
+    private fun reducedReading(
+        cents: Double,
+        isTuned: Boolean,
+        isLive: Boolean,
+    ): TunerUiState.Reading = TunerUiStateReducer.listening(
+        reading(cents = cents, isTuned = isTuned, isLive = isLive),
+    ) as TunerUiState.Reading
+
     private fun reading(
         noteName: String = "A",
         octave: Int = 4,
@@ -77,6 +135,7 @@ class TunerUiStateTest {
         cents: Double = 0.0,
         confidence: Double = 0.99,
         isTuned: Boolean = true,
+        isLive: Boolean = true,
     ) = TunerReading(
         noteName = noteName,
         octave = octave,
@@ -84,6 +143,7 @@ class TunerUiStateTest {
         cents = cents,
         confidence = confidence,
         isTuned = isTuned,
+        isLive = isLive,
         rms = 0.2,
         clipped = false,
     )

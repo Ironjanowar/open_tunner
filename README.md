@@ -9,9 +9,15 @@ Implementado y verificado en host y en emulador. El APK debug es instalable
 manualmente y no requiere ADB ni conexión a Internet.
 
 - Detector: salience armónica como estimador primario, YIN como contraste y control
-  de octava.
-- Captura: `AudioRecord` mono bloqueante con fallback 48 000 → 44 100 Hz.
+  de octava; discriminación de zumbido de red por estructura armónica.
+- Captura: `AudioRecord` mono bloqueante, con intentos `UNPROCESSED`/`MIC` y respaldo a
+  16 bits, y conmutación 48 000 → 44 100 Hz.
 - Rango: 40–1500 Hz, A4 = 440 Hz fijo, notas con sostenidos.
+- Sensibilidad: deslizador con cinco posiciones (Muy suave · Suave · Normal · Alta · Muy
+  alta) bajo la tarjeta central, por defecto `Alta`, recordado entre sesiones y aplicado
+  al instante.
+- Última nota: la nota detectada se queda en pantalla hasta que suena otra, y pasados
+  0,6 s sin señal se atenúa como «Última nota» con el aviso verde apagado.
 - Interfaz oscura de una pantalla con tarjeta central, aguja de ±50 cents, estados de
   permiso, silencio y error, y textos en español.
 - El micrófono se libera al salir de primer plano: no hay grabación en background.
@@ -69,8 +75,9 @@ app/build/outputs/apk/debug/app-debug.apk
 
 APK debug firmado con la clave de depuración (no sirve para publicar en tiendas).
 
-- Tamaño: 11,53 MB (`11 534 209` bytes).
-- SHA-256: `a6cc1185e9f941be86230f277d9c1518cfd51ff8c216006f2a4c1220a2a1696a`.
+- Tamaño: 11,55 MB (`11 550 593` bytes).
+- Versión: `0.2.0` (`versionCode 2`), instalable como actualización de la versión anterior.
+- SHA-256: `8519da0af932f0b54481bb0dcc1f81da32e7be4e01f2585c5cf2f7458f35a87b`.
 - Verificación de firma, manifiesto y permisos: [docs/evidence/apk-verification.txt](docs/evidence/apk-verification.txt).
 - Instalación sin ADB: [docs/instalacion.md](docs/instalacion.md).
 

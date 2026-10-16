@@ -17,6 +17,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.cuwano.afinador.audio.AndroidAudioInputFactory
+import com.cuwano.afinador.tuner.SharedPreferencesSensitivityStore
 import com.cuwano.afinador.tuner.TunerCaptureCoordinator
 import com.cuwano.afinador.tuner.TunerEngineProcessor
 import com.cuwano.afinador.tuner.TunerPermissionPolicy
@@ -37,12 +38,16 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        capture = TunerCaptureCoordinator(
-            TunerSession(
-                audioInputFactory = AndroidAudioInputFactory(),
-                processorFactory = { sampleRate -> TunerEngineProcessor(sampleRate) },
-            ),
+        val sensitivityStore = SharedPreferencesSensitivityStore(
+            getSharedPreferences(PREFERENCES_NAME, MODE_PRIVATE),
         )
+        val session = TunerSession(
+            audioInputFactory = AndroidAudioInputFactory(),
+            processorFactory = { sampleRate -> TunerEngineProcessor(sampleRate) },
+        )
+        // The stored level is applied once at startup, before the first capture.
+        session.setSensitivity(sensitivityStore.load())
+        capture = TunerCaptureCoordinator(session)
 
         val permissionGranted = mutableStateOf(hasRecordAudioPermission())
         val permanentlyDenied = mutableStateOf(false)
@@ -66,6 +71,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val uiState = remember { mutableStateOf<TunerUiState>(TunerUiState.PermissionNeeded) }
+            val sensitivity = remember { mutableStateOf(session.sensitivity) }
             val permissionLauncher = rememberLauncherForActivityResult(
                 ActivityResultContracts.RequestPermission(),
             ) { granted ->
@@ -98,6 +104,12 @@ class MainActivity : ComponentActivity() {
 
             TunerScreen(
                 state = uiState.value,
+                sensitivity = sensitivity.value,
+                onSensitivityChange = { profile ->
+                    sensitivity.value = profile
+                    session.setSensitivity(profile)
+                    sensitivityStore.save(profile)
+                },
                 onRequestPermission = {
                     hasRequested.value = true
                     permissionLauncher.launch(RECORD_AUDIO)
@@ -126,6 +138,7 @@ class MainActivity : ComponentActivity() {
 
     private companion object {
         const val STATE_REFRESH_INTERVAL_MS = 50L
+        const val PREFERENCES_NAME = "afinador"
         val RECORD_AUDIO = Manifest.permission.RECORD_AUDIO
     }
 }

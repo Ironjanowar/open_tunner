@@ -10,12 +10,38 @@ data class NoiseGateDecision(
 /** Tracks ambient RMS with a time-continuous exponential half-life. */
 class AdaptiveNoiseFloor(
     private val initialNoiseRms: Double,
-    private val minimumNoiseRms: Double,
+    minimumNoiseRms: Double,
     private val halfLifeSeconds: Double,
-    private val minimumSignalToNoiseRatio: Double,
+    minimumSignalToNoiseRatio: Double,
 ) {
     var noiseRms: Double = initialNoiseRms
         private set
+
+    /**
+     * Absolute floor the ambient estimate may not fall below. Mutable so the
+     * owning [TunerEngine] can retarget it when the user changes sensitivity;
+     * the engine is the single consumer of this object. When the new minimum
+     * sits above the current estimate the estimate is lifted to it immediately,
+     * so a less sensitive level takes effect on the next frame instead of
+     * waiting for the half-life to drag the floor up.
+     */
+    var minimumNoiseRms: Double = minimumNoiseRms
+        set(value) {
+            require(value.isFinite() && value > 0.0 && value <= initialNoiseRms) {
+                "minimumNoiseRms must be finite, positive, and no greater than initialNoiseRms"
+            }
+            field = value
+            if (noiseRms < value) noiseRms = value
+        }
+
+    /** Smallest trusted frame-over-floor ratio; retargeted per sensitivity. */
+    var minimumSignalToNoiseRatio: Double = minimumSignalToNoiseRatio
+        set(value) {
+            require(value.isFinite() && value > 0.0) {
+                "minimumSignalToNoiseRatio must be finite and positive"
+            }
+            field = value
+        }
 
     init {
         require(initialNoiseRms.isFinite() && initialNoiseRms > 0.0) {

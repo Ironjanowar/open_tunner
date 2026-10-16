@@ -17,11 +17,23 @@ sealed interface TunerUiState {
         val frequencyHz: Double,
         val confidence: Double,
         val isTuned: Boolean,
+        val isLive: Boolean = true,
     ) : TunerUiState {
         val noteWithOctave: String = "$noteName$octave"
         val centsText: String = String.format(Locale.ROOT, "%+.1f cents", cents)
         val frequencyText: String = String.format(Locale.ROOT, "%.2f Hz", frequencyHz)
         val confidenceText: String = String.format(Locale.ROOT, "%.0f %%", confidence * 100.0)
+
+        /** A held note: capture stopped or the detector went quiet, so the values are the last ones seen. */
+        val isStale: Boolean = !isLive
+
+        /** The single source of truth for the wording the status pill shows. */
+        val statusText: String = when {
+            isStale -> "Última nota"
+            isTuned -> "Afinado"
+            cents > 0.0 -> "Demasiado alto"
+            else -> "Demasiado bajo"
+        }
     }
 
     data class AudioError(val message: String) : TunerUiState
@@ -43,6 +55,7 @@ object TunerUiStateReducer {
             frequencyHz = it.frequencyHz,
             confidence = it.confidence,
             isTuned = it.isTuned,
+            isLive = it.isLive,
         )
     } ?: TunerUiState.ListeningSilence
 

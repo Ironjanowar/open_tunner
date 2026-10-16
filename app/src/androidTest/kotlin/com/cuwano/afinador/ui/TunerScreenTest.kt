@@ -1,8 +1,13 @@
 package com.cuwano.afinador.ui
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertHasClickAction
@@ -11,9 +16,12 @@ import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasProgressBarRangeInfo
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
+import com.cuwano.afinador.dsp.SensitivityProfile
 import com.cuwano.afinador.tuner.TunerUiState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -27,7 +35,13 @@ class TunerScreenTest {
     @Test
     fun reading_usesSpanish_darkSurface_andCentersTheNote() {
         composeRule.setContent {
-            TunerScreen(state = reading(), onRequestPermission = {}, onOpenSettings = {})
+            TunerScreen(
+                state = reading(),
+                sensitivity = SensitivityProfile.DEFAULT,
+                onSensitivityChange = {},
+                onRequestPermission = {},
+                onOpenSettings = {},
+            )
         }
 
         composeRule.onNodeWithText("Afinador cromático").assertIsDisplayed()
@@ -49,6 +63,8 @@ class TunerScreenTest {
         composeRule.setContent {
             TunerScreen(
                 state = reading(cents = 73.0, isTuned = false),
+                sensitivity = SensitivityProfile.DEFAULT,
+                onSensitivityChange = {},
                 onRequestPermission = {},
                 onOpenSettings = {},
             )
@@ -65,6 +81,8 @@ class TunerScreenTest {
         composeRule.setContent {
             TunerScreen(
                 state = reading(cents = -64.5, isTuned = false),
+                sensitivity = SensitivityProfile.DEFAULT,
+                onSensitivityChange = {},
                 onRequestPermission = {},
                 onOpenSettings = {},
             )
@@ -81,6 +99,8 @@ class TunerScreenTest {
         composeRule.setContent {
             TunerScreen(
                 state = TunerUiState.ListeningSilence,
+                sensitivity = SensitivityProfile.DEFAULT,
+                onSensitivityChange = {},
                 onRequestPermission = {},
                 onOpenSettings = {},
             )
@@ -96,6 +116,8 @@ class TunerScreenTest {
         composeRule.setContent {
             TunerScreen(
                 state = TunerUiState.PermissionNeeded,
+                sensitivity = SensitivityProfile.DEFAULT,
+                onSensitivityChange = {},
                 onRequestPermission = { requests++ },
                 onOpenSettings = {},
             )
@@ -117,6 +139,8 @@ class TunerScreenTest {
         composeRule.setContent {
             TunerScreen(
                 state = TunerUiState.PermissionDeniedPermanently,
+                sensitivity = SensitivityProfile.DEFAULT,
+                onSensitivityChange = {},
                 onRequestPermission = { requests++ },
                 onOpenSettings = { settingsOpens++ },
             )
@@ -138,6 +162,8 @@ class TunerScreenTest {
         composeRule.setContent {
             TunerScreen(
                 state = TunerUiState.AudioError("No se pudo iniciar el micrófono"),
+                sensitivity = SensitivityProfile.DEFAULT,
+                onSensitivityChange = {},
                 onRequestPermission = {},
                 onOpenSettings = {},
             )
@@ -147,9 +173,97 @@ class TunerScreenTest {
         composeRule.onNodeWithText("No se pudo iniciar el micrófono").assertIsDisplayed()
     }
 
+    @Test
+    fun sensitivitySlider_labelsTheFactoryDefault() {
+        composeRule.setContent {
+            TunerScreen(
+                state = reading(),
+                sensitivity = SensitivityProfile.DEFAULT,
+                onSensitivityChange = {},
+                onRequestPermission = {},
+                onOpenSettings = {},
+            )
+        }
+
+        composeRule.onNodeWithTag(TunerScreenTags.Sensitivity).assertIsDisplayed()
+        composeRule.onNodeWithTag(TunerScreenTags.SensitivityLabel).assertTextEquals("Alta")
+    }
+
+    @Test
+    fun sensitivitySlider_snapsToALevel_andReportsTheSelectedProfile() {
+        val selected = mutableStateOf(SensitivityProfile.DEFAULT)
+        val changes = mutableListOf<SensitivityProfile>()
+        composeRule.setContent {
+            TunerScreen(
+                state = reading(),
+                sensitivity = selected.value,
+                onSensitivityChange = {
+                    changes += it
+                    selected.value = it
+                },
+                onRequestPermission = {},
+                onOpenSettings = {},
+            )
+        }
+
+        val target = SensitivityProfile.MUY_ALTA
+        val targetIndex = SensitivityUi.indexOf(target)
+        composeRule.onNodeWithTag(TunerScreenTags.Sensitivity)
+            .performSemanticsAction(SemanticsActions.SetProgress) { it(targetIndex.toFloat()) }
+
+        composeRule.runOnIdle { assertEquals(listOf(target), changes) }
+        composeRule.onNodeWithTag(TunerScreenTags.SensitivityLabel).assertTextEquals("Muy alta")
+    }
+
+    @Test
+    fun sensitivitySlider_showsAllFiveLevelNames_andMarksTheSelectedOne() {
+        composeRule.setContent {
+            TunerScreen(
+                state = reading(),
+                sensitivity = SensitivityProfile.NORMAL,
+                onSensitivityChange = {},
+                onRequestPermission = {},
+                onOpenSettings = {},
+            )
+        }
+
+        // Every level must be readable on screen, not only the selected one.
+        SensitivityUi.labels.forEachIndexed { index, label ->
+            composeRule.onNodeWithTag("SensitivityTick_$index").assertTextEquals(label)
+        }
+
+        // Exactly one tick is the selected level, and it is the one tagged
+        // SensitivityLabel, so the player can tell the chosen level from the rest.
+        val selectedIndex = SensitivityUi.indexOf(SensitivityProfile.NORMAL)
+        composeRule.onNodeWithTag(TunerScreenTags.SensitivityLabel)
+            .assertTextEquals(SensitivityUi.labels[selectedIndex])
+        assertEquals(
+            "exactly one tick must be tagged as the selected level",
+            1,
+            composeRule.onAllNodesWithTag(TunerScreenTags.SensitivityLabel).fetchSemanticsNodes().size,
+        )
+    }
+
+    @Test
+    fun staleReading_showsUltimaNotaPill_andKeepsTheNoteOnScreen() {
+        composeRule.setContent {
+            TunerScreen(
+                state = reading(isLive = false),
+                sensitivity = SensitivityProfile.DEFAULT,
+                onSensitivityChange = {},
+                onRequestPermission = {},
+                onOpenSettings = {},
+            )
+        }
+
+        composeRule.onNodeWithText("Última nota").assertIsDisplayed()
+        composeRule.onNodeWithTag(TunerScreenTags.Note).assertTextEquals("A", "4")
+    }
+
     private fun reading(
         cents: Double = 0.0,
         isTuned: Boolean = true,
+        isLive: Boolean = true,
     ) = TunerUiState.Reading(
         noteName = "A",
         octave = 4,
@@ -157,5 +271,6 @@ class TunerScreenTest {
         frequencyHz = 440.0,
         confidence = 0.98,
         isTuned = isTuned,
+        isLive = isLive,
     )
 }
